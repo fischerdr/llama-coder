@@ -1,6 +1,29 @@
 # Architecture & Logic Flow
 
 This document provides a detailed explanation of how Llama Coder works internally and how to extend it with new inference backends.
+What's Included
+Complete Flow Diagram: A detailed ASCII diagram showing the entire request flow from user typing to completion display, including all 12 steps with decision points. Detailed Component Analysis: Deep dive into each major component:
+Extension activation
+Configuration system (including a bug I found: typo on line 30)
+Prompt provider with all pipeline stages
+Prompt preparation with notebook handling
+Autocomplete engine phases
+Language detection strategy
+Model format adaptation with comparison table
+Streaming & Completion Logic: Explains the sophisticated block stack algorithm that prevents incomplete code blocks, with examples showing why it matters. Extension Points: Clear guidance on where to hook in new features for the five most common enhancement areas. Adding New Inference Backends: This is the most detailed section, providing:
+Full backend abstraction design with TypeScript interfaces
+Complete implementations for 4 backends:
+Ollama (refactored from existing)
+OpenAI-compatible APIs
+vLLM (with specific optimizations)
+llama.cpp (different API format)
+Two implementation approaches:
+Option 1: Full abstraction (better long-term)
+Option 2: Minimal changes (faster to implement)
+Configuration changes needed in package.json
+Testing guide with example commands
+Comparison table showing API differences across backends
+Migration path with time estimates (~1 week)
 
 ## Table of Contents
 
@@ -147,12 +170,14 @@ This document provides a detailed explanation of how Llama Coder works internall
 ### Extension Activation (`extension.ts`)
 
 **Responsibilities:**
+
 - Initialize logging output channel
 - Create status bar item with toggle command
 - Register `InlineCompletionItemProvider` for all file patterns (`**`)
 - Register pause/resume/toggle commands
 
 **Key Points:**
+
 - Extension activates on `onStartupFinished` (see `package.json`)
 - Provider registered globally for all document types
 - Status bar shows current state and provides quick toggle
@@ -162,12 +187,14 @@ This document provides a detailed explanation of how Llama Coder works internall
 **Design Pattern:** Singleton with computed properties
 
 **Why This Matters:**
+
 - Configuration is read fresh on every access (no stale state)
 - Endpoint normalization (strips trailing slashes, defaults to localhost)
 - Model format is auto-detected from model name prefix
 - Typo in code: `cutom.format` instead of `custom.format` (line 30)
 
 **Key Configuration Flow:**
+
 ```typescript
 config.inference → {
   endpoint: string,      // Normalized URL
@@ -184,6 +211,7 @@ config.inference → {
 ### Prompt Provider (`prompts/provider.ts`)
 
 **Core State:**
+
 - `lock: AsyncLock` - Prevents concurrent completions
 - `paused: boolean` - User-controlled pause state
 - `statusbar: StatusBarItem` - UI feedback
@@ -229,6 +257,7 @@ config.inference → {
 **Process:**
 
 1. **Basic extraction:**
+
    ```typescript
    text = document.getText()
    prefix = text.slice(0, cursorOffset)
@@ -256,6 +285,7 @@ config.inference → {
    - Helps model understand context
 
 **Why Notebooks Are Special:**
+
 - Cells are separate documents in VSCode
 - Need to aggregate context across cell boundaries
 - Outputs provide valuable context (e.g., error messages, data)
@@ -266,6 +296,7 @@ config.inference → {
 **The Heart of Code Generation**
 
 **Phase 1: Prompt Formatting**
+
 ```typescript
 // Before: { prefix, suffix, format }
 adaptPrompt({ prefix, suffix, format: 'codellama' })
@@ -276,6 +307,7 @@ adaptPrompt({ prefix, suffix, format: 'codellama' })
 ```
 
 **Phase 2: Request Construction**
+
 ```typescript
 {
   model: "codellama:7b-code-q4_K_M",
@@ -296,11 +328,13 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 ### Language Detection (`prompts/processors/detectLanguage.ts`)
 
 **Strategy:**
+
 1. Try VSCode's `languageId` first (most reliable)
 2. Fall back to file extension mapping
 3. Handle special cases (e.g., `.mjs` → `javascript`)
 
 **Language Database** (`languages.ts`):
+
 ```typescript
 {
   [language: string]: {
@@ -314,6 +348,7 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 ```
 
 **Why This Matters:**
+
 - Determines comment syntax for headers
 - Some models trained with language hints
 - Affects FIM prompt construction
@@ -335,12 +370,14 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 **Three-Step API Usage:**
 
 1. **Check Model** (`ollamaCheckModel.ts`):
+
    ```typescript
    GET {endpoint}/api/tags
    → { models: [{ name: "codellama:7b-code" }, ...] }
    ```
 
 2. **Download Model** (`ollamaDownloadModel.ts`):
+
    ```typescript
    POST {endpoint}/api/pull
    Body: { name: "codellama:7b-code" }
@@ -348,6 +385,7 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
    ```
 
 3. **Generate** (`ollamaTokenGenerator.ts`):
+
    ```typescript
    POST {endpoint}/api/generate
    Body: { model, prompt, options }
@@ -355,6 +393,7 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
    ```
 
 **Line Generator** (`modules/lineGenerator.ts`):
+
 - Low-level HTTP streaming primitive
 - Yields complete lines from chunked response
 - Handles partial chunks at boundaries
@@ -414,6 +453,7 @@ for each token:
 ```
 
 **Why This Matters:**
+
 - Prevents runaway generation
 - Ensures syntactically valid completions
 - Balances completion length vs. generation time
@@ -421,12 +461,14 @@ for each token:
 ### Post-Processing
 
 1. **Strip End Tokens:**
+
    ```typescript
    if result.endsWith('<EOT>'):
      result = result.slice(0, -5)
    ```
 
 2. **Trim Line Endings:**
+
    ```typescript
    result = result.split('\n')
      .map(line => line.trimEnd())
@@ -471,6 +513,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
 **Implementation Path:**
 
 1. **Add Backend Enum** in `config.ts`:
+
    ```typescript
    type InferenceBackend = 'ollama' | 'openai' | 'vllm' | 'llamacpp';
 
@@ -484,6 +527,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
 2. **Create Backend Abstraction Layer:**
 
    Create `src/backends/base.ts`:
+
    ```typescript
    export interface InferenceBackend {
      checkModel(model: string): Promise<boolean>;
@@ -502,6 +546,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 3. **Implement Ollama Backend** in `src/backends/ollama.ts`:
+
    ```typescript
    export class OllamaBackend implements InferenceBackend {
      constructor(private endpoint: string, private bearerToken: string) {}
@@ -522,6 +567,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 4. **Implement OpenAI Backend** in `src/backends/openai.ts`:
+
    ```typescript
    export class OpenAIBackend implements InferenceBackend {
      constructor(
@@ -581,6 +627,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 5. **Implement vLLM Backend** in `src/backends/vllm.ts`:
+
    ```typescript
    export class VLLMBackend implements InferenceBackend {
      // vLLM uses OpenAI-compatible API
@@ -616,6 +663,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 6. **Implement llama.cpp Backend** in `src/backends/llamacpp.ts`:
+
    ```typescript
    export class LlamaCppBackend implements InferenceBackend {
      // llama.cpp server uses different API
@@ -667,6 +715,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 7. **Update autocomplete.ts to use backend:**
+
    ```typescript
    import { createBackend } from '../backends/factory';
 
@@ -702,6 +751,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
    ```
 
 8. **Backend Factory** in `src/backends/factory.ts`:
+
    ```typescript
    import { OllamaBackend } from './ollama';
    import { OpenAIBackend } from './openai';
@@ -734,6 +784,7 @@ The current architecture is **Ollama-specific** but can be generalized. Here's h
 If you want to minimize code changes and just support OpenAI-compatible APIs:
 
 1. **Add configuration** in `package.json`:
+
    ```json
    "inference.apiType": {
      "type": "string",
@@ -743,6 +794,7 @@ If you want to minimize code changes and just support OpenAI-compatible APIs:
    ```
 
 2. **Modify `ollamaTokenGenerator.ts`** to handle different response formats:
+
    ```typescript
    export async function* tokenGenerator(
      url: string,
@@ -793,6 +845,7 @@ Add to `package.json` configuration section:
 ### Testing New Backends
 
 1. **Start local backend:**
+
    ```bash
    # vLLM example
    python -m vllm.entrypoints.openai.api_server \
@@ -813,11 +866,13 @@ Add to `package.json` configuration section:
 ### Key Considerations
 
 **Model Compatibility:**
+
 - Not all models support FIM (Fill-In-Middle)
 - Base models work better than instruct/chat models for completion
 - Check model documentation for FIM token format
 
 **Performance:**
+
 - Local inference: latency depends on hardware
 - Remote APIs: network latency matters
 - vLLM and llama.cpp have different performance characteristics
@@ -832,6 +887,7 @@ Add to `package.json` configuration section:
 | llama.cpp | `GET /props` | N/A (preloaded) | `POST /completion` |
 
 **Authentication:**
+
 - Ollama: Optional bearer token
 - OpenAI: API key in `Authorization: Bearer <key>`
 - vLLM: Usually none (local deployment)
