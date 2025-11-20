@@ -1,69 +1,6 @@
 import { adaptPrompt, ModelFormat } from './models';
 
 describe('adaptPrompt', () => {
-    describe('CodeLlama format', () => {
-        it('should format prompt without extra spaces', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: 'function foo()',
-                suffix: '}'
-            });
-
-            expect(result.prompt).toBe('<PRE>function foo()<SUF>}<MID>');
-        });
-
-        it('should include all CodeLlama stop tokens', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: 'const x = ',
-                suffix: ';'
-            });
-
-            expect(result.stop).toEqual(['<END>', '<EOD>', '<EOT>']);
-            expect(result.stop).toHaveLength(3);
-        });
-
-        it('should handle empty prefix', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: '',
-                suffix: 'return x;'
-            });
-
-            expect(result.prompt).toBe('<PRE><SUF>return x;<MID>');
-        });
-
-        it('should handle empty suffix', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: 'function main() {',
-                suffix: ''
-            });
-
-            expect(result.prompt).toBe('<PRE>function main() {<SUF><MID>');
-        });
-
-        it('should handle both empty prefix and suffix', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: '',
-                suffix: ''
-            });
-
-            expect(result.prompt).toBe('<PRE><SUF><MID>');
-        });
-
-        it('should preserve multiline content', () => {
-            const result = adaptPrompt({
-                format: 'codellama',
-                prefix: 'def foo():\n    x = 1\n    ',
-                suffix: '\n    return x'
-            });
-
-            expect(result.prompt).toBe('<PRE>def foo():\n    x = 1\n    <SUF>\n    return x<MID>');
-        });
-    });
-
     describe('DeepSeek format', () => {
         it('should format prompt with correct tokens', () => {
             const result = adaptPrompt({
@@ -86,14 +23,14 @@ describe('adaptPrompt', () => {
             expect(result.stop).toHaveLength(3);
         });
 
-        it('should not include <END> token', () => {
+        it('should not include endoftext token', () => {
             const result = adaptPrompt({
                 format: 'deepseek',
                 prefix: 'test',
                 suffix: 'test'
             });
 
-            expect(result.stop).not.toContain('<END>');
+            expect(result.stop).not.toContain('<|endoftext|>');
         });
 
         it('should handle empty prefix', () => {
@@ -125,12 +62,22 @@ describe('adaptPrompt', () => {
 
             expect(result.prompt).toBe('<｜fim▁begin｜>def bar():\n    y = 2\n    <｜fim▁hole｜>\n    return y<｜fim▁end｜>');
         });
+
+        it('should handle both empty prefix and suffix', () => {
+            const result = adaptPrompt({
+                format: 'deepseek',
+                prefix: '',
+                suffix: ''
+            });
+
+            expect(result.prompt).toBe('<｜fim▁begin｜><｜fim▁hole｜><｜fim▁end｜>');
+        });
     });
 
-    describe('Stable Code format', () => {
+    describe('Qwen format', () => {
         it('should format prompt with correct tokens', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'function baz()',
                 suffix: '}'
             });
@@ -138,9 +85,9 @@ describe('adaptPrompt', () => {
             expect(result.prompt).toBe('<fim_prefix>function baz()<fim_suffix>}<fim_middle>');
         });
 
-        it('should include all Stable Code stop tokens', () => {
+        it('should include all Qwen stop tokens', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'const x = ',
                 suffix: ';'
             });
@@ -151,7 +98,7 @@ describe('adaptPrompt', () => {
 
         it('should include endoftext token', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'test',
                 suffix: 'test'
             });
@@ -161,7 +108,7 @@ describe('adaptPrompt', () => {
 
         it('should include fim format tokens in stop list', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'test',
                 suffix: 'test'
             });
@@ -173,7 +120,7 @@ describe('adaptPrompt', () => {
 
         it('should handle empty prefix', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: '',
                 suffix: 'return x;'
             });
@@ -183,7 +130,7 @@ describe('adaptPrompt', () => {
 
         it('should handle empty suffix', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'fn main() {',
                 suffix: ''
             });
@@ -193,12 +140,45 @@ describe('adaptPrompt', () => {
 
         it('should preserve multiline content', () => {
             const result = adaptPrompt({
-                format: 'stable-code',
+                format: 'qwen',
                 prefix: 'fn baz() {\n    let z = 3;\n    ',
                 suffix: '\n    z\n}'
             });
 
             expect(result.prompt).toBe('<fim_prefix>fn baz() {\n    let z = 3;\n    <fim_suffix>\n    z\n}<fim_middle>');
+        });
+
+        it('should handle both empty prefix and suffix', () => {
+            const result = adaptPrompt({
+                format: 'qwen',
+                prefix: '',
+                suffix: ''
+            });
+
+            expect(result.prompt).toBe('<fim_prefix><fim_suffix><fim_middle>');
+        });
+
+        it('should preserve special characters in code', () => {
+            const result = adaptPrompt({
+                format: 'qwen',
+                prefix: 'const regex = /[a-z]+/',
+                suffix: 'console.log(regex);'
+            });
+
+            expect(result.prompt).toBe('<fim_prefix>const regex = /[a-z]+/<fim_suffix>console.log(regex);<fim_middle>');
+        });
+
+        it('should handle YAML/Ansible content', () => {
+            const result = adaptPrompt({
+                format: 'qwen',
+                prefix: '- name: Configure service\n  ansible.builtin.service:\n    name: mysvc\n    ',
+                suffix: '\n    enabled: true'
+            });
+
+            expect(result.prompt).toContain('<fim_prefix>');
+            expect(result.prompt).toContain('<fim_suffix>');
+            expect(result.prompt).toContain('<fim_middle>');
+            expect(result.prompt).toContain('ansible.builtin.service');
         });
     });
 
@@ -207,33 +187,43 @@ describe('adaptPrompt', () => {
         const testSuffix = '}';
 
         it('should generate different prompts for different formats', () => {
-            const codellama = adaptPrompt({ format: 'codellama', prefix: testPrefix, suffix: testSuffix });
             const deepseek = adaptPrompt({ format: 'deepseek', prefix: testPrefix, suffix: testSuffix });
-            const stableCode = adaptPrompt({ format: 'stable-code', prefix: testPrefix, suffix: testSuffix });
+            const qwen = adaptPrompt({ format: 'qwen', prefix: testPrefix, suffix: testSuffix });
 
-            expect(codellama.prompt).not.toBe(deepseek.prompt);
-            expect(codellama.prompt).not.toBe(stableCode.prompt);
-            expect(deepseek.prompt).not.toBe(stableCode.prompt);
+            expect(deepseek.prompt).not.toBe(qwen.prompt);
         });
 
         it('should have different stop tokens for different formats', () => {
-            const codellama = adaptPrompt({ format: 'codellama', prefix: testPrefix, suffix: testSuffix });
             const deepseek = adaptPrompt({ format: 'deepseek', prefix: testPrefix, suffix: testSuffix });
-            const stableCode = adaptPrompt({ format: 'stable-code', prefix: testPrefix, suffix: testSuffix });
+            const qwen = adaptPrompt({ format: 'qwen', prefix: testPrefix, suffix: testSuffix });
 
-            expect(codellama.stop).not.toEqual(deepseek.stop);
-            expect(codellama.stop).not.toEqual(stableCode.stop);
-            expect(deepseek.stop).not.toEqual(stableCode.stop);
+            expect(deepseek.stop).not.toEqual(qwen.stop);
         });
 
         it('all formats should include prefix and suffix in prompt', () => {
-            const formats: ModelFormat[] = ['codellama', 'deepseek', 'stable-code'];
+            const formats: ModelFormat[] = ['deepseek', 'qwen'];
 
             formats.forEach(format => {
                 const result = adaptPrompt({ format, prefix: testPrefix, suffix: testSuffix });
                 expect(result.prompt).toContain(testPrefix);
                 expect(result.prompt).toContain(testSuffix);
             });
+        });
+
+        it('DeepSeek should use unique tokens', () => {
+            const result = adaptPrompt({ format: 'deepseek', prefix: testPrefix, suffix: testSuffix });
+
+            expect(result.prompt).toContain('<｜fim▁begin｜>');
+            expect(result.prompt).toContain('<｜fim▁hole｜>');
+            expect(result.prompt).toContain('<｜fim▁end｜>');
+        });
+
+        it('Qwen should use standard FIM tokens', () => {
+            const result = adaptPrompt({ format: 'qwen', prefix: testPrefix, suffix: testSuffix });
+
+            expect(result.prompt).toContain('<fim_prefix>');
+            expect(result.prompt).toContain('<fim_suffix>');
+            expect(result.prompt).toContain('<fim_middle>');
         });
     });
 });

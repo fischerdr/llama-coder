@@ -21,18 +21,20 @@ class Config {
         let maxLines = config.get('maxLines') as number;
         let maxTokens = config.get('maxTokens') as number;
         let temperature = config.get('temperature') as number;
+        let maxSuffixLength = config.get('maxSuffixLength') as number;
+        let maxPrefixLength = config.get('maxPrefixLength') as number;
 
         // Load model
         let modelName = config.get('model') as string;
-        let modelFormat: ModelFormat = 'codellama';
+        let modelFormat: ModelFormat = 'qwen';
         if (modelName === 'custom') {
             modelName = config.get('custom.model') as string;
-            modelFormat = config.get('cutom.format') as ModelFormat;
+            modelFormat = config.get('custom.format') as ModelFormat;
         } else {
             if (modelName.startsWith('deepseek-coder')) {
                 modelFormat = 'deepseek';
-            } else if (modelName.startsWith('stable-code')) {
-                modelFormat = 'stable-code';
+            } else if (modelName.startsWith('qwen')) {
+                modelFormat = 'qwen';
             }
         }
 
@@ -44,6 +46,8 @@ class Config {
             maxLines,
             maxTokens,
             temperature,
+            maxSuffixLength,
+            maxPrefixLength,
             modelName,
             modelFormat,
             delay

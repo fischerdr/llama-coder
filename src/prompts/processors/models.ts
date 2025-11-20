@@ -1,16 +1,8 @@
-export type ModelFormat = 'codellama' | 'deepseek' | 'stable-code';
+export type ModelFormat = 'deepseek' | 'qwen';
 
 export function adaptPrompt(args: { format: ModelFormat, prefix: string, suffix: string }): { prompt: string, stop: string[] } {
 
-    // Common non FIM mode
-    // if (!args.suffix) {
-    //     return {
-    //         prompt: args.prefix,
-    //         stop: [`<END>`]
-    //     };
-    // }
-
-    // Starcoder FIM
+    // DeepSeek FIM
     if (args.format === 'deepseek') {
         return {
             prompt: `<｜fim▁begin｜>${args.prefix}<｜fim▁hole｜>${args.suffix}<｜fim▁end｜>`,
@@ -18,17 +10,9 @@ export function adaptPrompt(args: { format: ModelFormat, prefix: string, suffix:
         };
     }
 
-    // Stable code FIM
-    if (args.format === 'stable-code') {
-        return {
-            prompt: `<fim_prefix>${args.prefix}<fim_suffix>${args.suffix}<fim_middle>`,
-            stop: [`<|endoftext|>`, `<fim_prefix>`, `<fim_suffix>`, `<fim_middle>`]
-        };
-    }
-
-    // Codellama FIM
+    // Qwen FIM (default)
     return {
-        prompt: `<PRE>${args.prefix}<SUF>${args.suffix}<MID>`,
-        stop: [`<END>`, `<EOD>`, `<EOT>`]
+        prompt: `<fim_prefix>${args.prefix}<fim_suffix>${args.suffix}<fim_middle>`,
+        stop: [`<|endoftext|>`, `<fim_prefix>`, `<fim_suffix>`, `<fim_middle>`]
     };
 }

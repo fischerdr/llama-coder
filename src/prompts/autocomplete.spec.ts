@@ -12,83 +12,17 @@ describe('autocomplete', () => {
     });
 
     describe('stop token stripping', () => {
-        it('should strip <EOT> token from CodeLlama completions', async () => {
-            // Mock token generator that returns completion with <EOT>
+        it('should strip <|endoftext|> token from Qwen completions', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'const x = 1', done: false };
-                yield { model: 'codellama', response: ';<EOT>', done: true };
+                yield { model: 'qwen', response: 'const z = 3;', done: false };
+                yield { model: 'qwen', response: '<|endoftext|>', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
-                prefix: 'const x = ',
-                suffix: '',
-                maxLines: 10,
-                maxTokens: 100,
-                temperature: 0.2
-            });
-
-            expect(result).toBe('const x = 1;');
-            expect(result).not.toContain('<EOT>');
-        });
-
-        it('should strip <END> token from CodeLlama completions', async () => {
-            mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'function foo() {', done: false };
-                yield { model: 'codellama', response: ' return 42; }<END>', done: true };
-            });
-
-            const result = await autocomplete({
-                endpoint: 'http://localhost:11434',
-                bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
-                prefix: 'function foo() {',
-                suffix: '',
-                maxLines: 10,
-                maxTokens: 100,
-                temperature: 0.2
-            });
-
-            expect(result).toBe('function foo() { return 42; }');
-            expect(result).not.toContain('<END>');
-        });
-
-        it('should strip <EOD> token from CodeLlama completions', async () => {
-            mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'let y = 2<EOD>', done: true };
-            });
-
-            const result = await autocomplete({
-                endpoint: 'http://localhost:11434',
-                bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
-                prefix: 'let y = ',
-                suffix: '',
-                maxLines: 10,
-                maxTokens: 100,
-                temperature: 0.2
-            });
-
-            expect(result).toBe('let y = 2');
-            expect(result).not.toContain('<EOD>');
-        });
-
-        it('should strip <|endoftext|> token from Stable Code completions', async () => {
-            mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'stable-code', response: 'const z = 3;', done: false };
-                yield { model: 'stable-code', response: '<|endoftext|>', done: true };
-            });
-
-            const result = await autocomplete({
-                endpoint: 'http://localhost:11434',
-                bearerToken: '',
-                model: 'stable-code:3b',
-                format: 'stable-code',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: 'const z = ',
                 suffix: '',
                 maxLines: 10,
@@ -100,16 +34,16 @@ describe('autocomplete', () => {
             expect(result).not.toContain('<|endoftext|>');
         });
 
-        it('should strip <fim_prefix> token from Stable Code completions', async () => {
+        it('should strip <fim_prefix> token from Qwen completions', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'stable-code', response: 'return true<fim_prefix>', done: true };
+                yield { model: 'qwen', response: 'return true<fim_prefix>', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'stable-code:3b',
-                format: 'stable-code',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,
@@ -144,15 +78,15 @@ describe('autocomplete', () => {
 
         it('should not strip stop tokens that appear in middle of text', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'const endToken = "<EOT>"', done: false };
-                yield { model: 'codellama', response: ';', done: true };
+                yield { model: 'qwen', response: 'const endToken = "<|endoftext|>"', done: false };
+                yield { model: 'qwen', response: ';', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: 'const endToken = ',
                 suffix: '',
                 maxLines: 10,
@@ -160,19 +94,19 @@ describe('autocomplete', () => {
                 temperature: 0.2
             });
 
-            expect(result).toBe('const endToken = "<EOT>";');
+            expect(result).toBe('const endToken = "<|endoftext|>";');
         });
 
         it('should handle completion with no stop tokens', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'return 123;', done: true };
+                yield { model: 'qwen', response: 'return 123;', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,
@@ -185,14 +119,14 @@ describe('autocomplete', () => {
 
         it('should only strip the first matching stop token from end', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'done<END>', done: true };
+                yield { model: 'qwen', response: 'done<|endoftext|>', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,
@@ -200,23 +134,23 @@ describe('autocomplete', () => {
                 temperature: 0.2
             });
 
-            // Should strip <END> because it's at the end and in stop list
+            // Should strip <|endoftext|> because it's at the end and in stop list
             expect(result).toBe('done');
-            expect(result).not.toContain('<END>');
+            expect(result).not.toContain('<|endoftext|>');
         });
     });
 
     describe('whitespace trimming', () => {
         it('should trim trailing spaces from lines', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'line1  \nline2   \nline3    ', done: true };
+                yield { model: 'qwen', response: 'line1  \nline2   \nline3    ', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,
@@ -229,14 +163,14 @@ describe('autocomplete', () => {
 
         it('should preserve leading whitespace', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: '  indented  ', done: true };
+                yield { model: 'qwen', response: '  indented  ', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,
@@ -251,19 +185,19 @@ describe('autocomplete', () => {
     describe('block stack and max lines', () => {
         it('should stop at max lines when stack is empty', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'line1\n', done: false };
-                yield { model: 'codellama', response: 'line2\n', done: false };
-                yield { model: 'codellama', response: 'line3\n', done: false };
-                yield { model: 'codellama', response: 'line4\n', done: false };
-                yield { model: 'codellama', response: 'line5\n', done: false };
-                yield { model: 'codellama', response: 'line6', done: true };
+                yield { model: 'qwen', response: 'line1\n', done: false };
+                yield { model: 'qwen', response: 'line2\n', done: false };
+                yield { model: 'qwen', response: 'line3\n', done: false };
+                yield { model: 'qwen', response: 'line4\n', done: false };
+                yield { model: 'qwen', response: 'line5\n', done: false };
+                yield { model: 'qwen', response: 'line6', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 3,
@@ -277,18 +211,18 @@ describe('autocomplete', () => {
 
         it('should continue past max lines when inside brackets', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: '{\n', done: false };
-                yield { model: 'codellama', response: '  a: 1,\n', done: false };
-                yield { model: 'codellama', response: '  b: 2,\n', done: false };
-                yield { model: 'codellama', response: '  c: 3\n', done: false };
-                yield { model: 'codellama', response: '}', done: true };
+                yield { model: 'qwen', response: '{\n', done: false };
+                yield { model: 'qwen', response: '  a: 1,\n', done: false };
+                yield { model: 'qwen', response: '  b: 2,\n', done: false };
+                yield { model: 'qwen', response: '  c: 3\n', done: false };
+                yield { model: 'qwen', response: '}', done: true };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 2,
@@ -307,16 +241,16 @@ describe('autocomplete', () => {
             let shouldCancel = false;
 
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'codellama', response: 'before_cancel', done: false };
+                yield { model: 'qwen', response: 'before_cancel', done: false };
                 shouldCancel = true;
-                yield { model: 'codellama', response: '_after_cancel', done: false };
+                yield { model: 'qwen', response: '_after_cancel', done: false };
             });
 
             const result = await autocomplete({
                 endpoint: 'http://localhost:11434',
                 bearerToken: '',
-                model: 'codellama:7b',
-                format: 'codellama',
+                model: 'qwen2.5-coder:7b',
+                format: 'qwen',
                 prefix: '',
                 suffix: '',
                 maxLines: 10,

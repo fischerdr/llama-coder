@@ -18,6 +18,18 @@ export async function autocomplete(args: {
 
     let prompt = adaptPrompt({ prefix: args.prefix, suffix: args.suffix, format: args.format });
 
+    // Log the formatted FIM prompt
+    info('=== FIM Prompt Details ===');
+    info(`Model Format: ${args.format}`);
+    info(`Prefix length: ${args.prefix.length} chars`);
+    info(`Suffix length: ${args.suffix.length} chars`);
+    info(`Formatted prompt length: ${prompt.prompt.length} chars`);
+    info(`Stop tokens: ${JSON.stringify(prompt.stop)}`);
+    info('First 200 chars of formatted prompt:');
+    info(prompt.prompt.substring(0, 200));
+    info('Last 200 chars of formatted prompt:');
+    info(prompt.prompt.substring(Math.max(0, prompt.prompt.length - 200)));
+
     // Calculate arguments
     let data = {
         model: args.model,
@@ -30,11 +42,22 @@ export async function autocomplete(args: {
         }
     };
 
+    // Log the complete request payload
+    info('=== Ollama API Request ===');
+    info(`Endpoint: ${args.endpoint}/api/generate`);
+    info(`Model: ${args.model}`);
+    info(`Temperature: ${args.temperature}`);
+    info(`Max Tokens: ${args.maxTokens}`);
+    info(`Request payload: ${JSON.stringify({ ...data, prompt: `[${data.prompt.length} chars]` }, null, 2)}`);
+
     // Receiving tokens
+    info('=== Starting Token Stream ===');
     let res = '';
     let totalLines = 1;
     let blockStack: ('[' | '(' | '{')[] = [];
+    let tokenCount = 0;
     outer: for await (let tokens of ollamaTokenGenerator(args.endpoint + '/api/generate', data, args.bearerToken)) {
+        tokenCount++;
         if (args.canceled && args.canceled()) {
             break;
         }
@@ -101,6 +124,17 @@ export async function autocomplete(args: {
 
     // Trim ends of all lines since sometimes the AI completion will add extra spaces
     res = res.split('\n').map((v) => v.trimEnd()).join('\n');
+
+    // Log the final completion result
+    info('=== Completion Result ===');
+    info(`Total tokens received: ${tokenCount}`);
+    info(`Total lines generated: ${totalLines}`);
+    info(`Final block stack depth: ${blockStack.length}`);
+    info(`Completion length: ${res.length} chars`);
+    info(`Number of lines in result: ${res.split('\n').length}`);
+    info('Complete result:');
+    info(res);
+    info('=== End of Completion ===');
 
     return res;
 }

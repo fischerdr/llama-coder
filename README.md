@@ -28,21 +28,34 @@ Install [Ollama](https://ollama.ai) on dedicated machine and configure endpoint 
 
 ## Models
 
-Currently Llama Coder supports only Codellama. Model is quantized in different ways, but our tests shows that `q4` is an optimal way to run network. When selecting model the bigger the model is, it performs better. Always pick the model with the biggest size and the biggest possible quantization for your machine. Default one is `stable-code:3b-code-q4_0` and should work everywhere and outperforms most other models.
+Llama Coder now supports **DeepSeek Coder** and **Qwen Coder** models, both optimized for code completion tasks. Models are quantized for efficiency - `q4_K_M` and `q5_K_M` provide the best balance of speed and quality. The default is `qwen2.5-coder:7b` which offers excellent performance across 40+ languages with 32K context window.
 
-| Name                      | RAM/VRAM | Notes |
-| ------------------------- | -------- | ----- |
-| stable-code:3b-code-q4_0  | 3GB      |       |
-| codellama:7b-code-q4_K_M  | 5GB      |       |
-| codellama:7b-code-q6_K    | 6GB      | m     |
-| codellama:7b-code-fp16    | 14GB     | g     |
-| codellama:13b-code-q4_K_M | 10GB     |       |
-| codellama:13b-code-q6_K   | 14GB     | m     |
-| codellama:34b-code-q4_K_M | 24GB     |       |
-| codellama:34b-code-q6_K   | 32GB     | m     |
+### DeepSeek Coder Models
 
-- m - slow on MacOS
-- g - slow on older NVidia cards (pre 30xx)
+Trained on 2T tokens (87% code, 13% natural language). Supports 16K context.
+
+| Name                           | RAM/VRAM | Notes |
+| ------------------------------ | -------- | ----- |
+| deepseek-coder:1.3b-base-q4_0  | 1GB      | Fastest, lowest resource usage |
+| deepseek-coder:6.7b-base-q4_K_M | 4GB     | Good balance of speed/quality |
+| deepseek-coder:6.7b-base-q5_K_M | 5GB     | Better quality, slightly slower |
+| deepseek-coder:33b-base-q4_K_M  | 20GB    | Highest quality, requires powerful GPU |
+
+### Qwen Coder Models
+
+Trained on massive datasets with superior multi-language support. Qwen2.5 supports 32K context, Qwen3 supports 256K context.
+
+| Name                    | RAM/VRAM | Context | Notes |
+| ----------------------- | -------- | ------- | ----- |
+| qwen2.5-coder:0.5b      | 0.4GB    | 32K     | Ultra-lightweight for low-end systems |
+| qwen2.5-coder:1.5b      | 1GB      | 32K     | Excellent for laptops |
+| qwen2.5-coder:3b        | 2GB      | 32K     | Good speed/quality balance |
+| qwen2.5-coder:7b        | 5GB      | 32K     | **Default** - Best overall performance |
+| qwen2.5-coder:14b       | 9GB      | 32K     | High quality for capable systems |
+| qwen2.5-coder:32b       | 20GB     | 32K     | Premium quality, powerful GPU required |
+| qwen3-coder:30b         | 19GB     | 256K    | MoE architecture, ultra-long context |
+
+**Recommendation**: Start with `qwen2.5-coder:7b` (default). Use larger models if you have more VRAM and want better quality. Use smaller models for faster completions on limited hardware.
 
 ## Troubleshooting
 

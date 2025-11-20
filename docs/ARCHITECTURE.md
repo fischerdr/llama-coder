@@ -108,17 +108,16 @@ Migration path with time estimates (~1 week)
 │ 9. AUTOCOMPLETE EXECUTION                                      │
 │                                                                 │
 │  a) Format prompt using model-specific FIM template:           │
-│     - CodeLlama: <PRE> prefix <SUF> suffix <MID>              │
 │     - DeepSeek: <｜fim▁begin｜>...<｜fim▁hole｜>...<｜fim▁end｜>│
-│     - Stable Code: <fim_prefix>...<fim_suffix>...<fim_middle> │
+│     - Qwen: <fim_prefix>...<fim_suffix>...<fim_middle>        │
 │                                                                 │
 │  b) Build request payload:                                     │
 │     {                                                           │
-│       model: "stable-code:3b-code-q4_0",                       │
+│       model: "qwen2.5-coder:7b",                               │
 │       prompt: "<formatted FIM prompt>",                        │
 │       raw: true,                                               │
 │       options: {                                               │
-│         stop: ["<EOT>", ...],                                  │
+│         stop: ["<|endoftext|>", ...],                          │
 │         num_predict: 256,                                      │
 │         temperature: 0.2                                       │
 │       }                                                         │
@@ -299,10 +298,10 @@ config.inference → {
 
 ```typescript
 // Before: { prefix, suffix, format }
-adaptPrompt({ prefix, suffix, format: 'codellama' })
+adaptPrompt({ prefix, suffix, format: 'qwen' })
 // After: {
-//   prompt: "<PRE> prefix <SUF> suffix <MID>",
-//   stop: ["<END>", "<EOD>", "<EOT>"]
+//   prompt: "<fim_prefix>prefix<fim_suffix>suffix<fim_middle>",
+//   stop: ["<|endoftext|>", "<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
 // }
 ```
 
@@ -310,7 +309,7 @@ adaptPrompt({ prefix, suffix, format: 'codellama' })
 
 ```typescript
 {
-  model: "codellama:7b-code-q4_K_M",
+  model: "qwen2.5-coder:7b",
   prompt: "<formatted>",
   raw: true,                    // Don't use chat template
   options: {
@@ -355,13 +354,12 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 
 ### Model Format Adaptation (`prompts/processors/models.ts`)
 
-**Three FIM Formats:**
+**Two FIM Formats:**
 
 | Format | Template | Stop Tokens |
 |--------|----------|-------------|
-| CodeLlama | `<PRE> {prefix} <SUF> {suffix} <MID>` | `<END>`, `<EOD>`, `<EOT>` |
-| DeepSeek | `<｜fim▁begin｜>{prefix}<｜fim▁hole｜>{suffix}<｜fim▁end｜>` | `<｜fim▁begin｜>`, `<｜fim▁hole｜>`, `<｜fim▁end｜>`, `<END>` |
-| Stable Code | `<fim_prefix>{prefix}<fim_suffix>{suffix}<fim_middle>` | `<\|endoftext\|>` |
+| DeepSeek | `<｜fim▁begin｜>{prefix}<｜fim▁hole｜>{suffix}<｜fim▁end｜>` | `<｜fim▁begin｜>`, `<｜fim▁hole｜>`, `<｜fim▁end｜>` |
+| Qwen | `<fim_prefix>{prefix}<fim_suffix>{suffix}<fim_middle>` | `<\|endoftext\|>`, `<fim_prefix>`, `<fim_suffix>`, `<fim_middle>` |
 
 **Critical Insight:** The model MUST be trained with the correct FIM format. Using the wrong template will produce garbage output.
 
@@ -373,14 +371,14 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 
    ```typescript
    GET {endpoint}/api/tags
-   → { models: [{ name: "codellama:7b-code" }, ...] }
+   → { models: [{ name: "qwen2.5-coder:7b" }, ...] }
    ```
 
 2. **Download Model** (`ollamaDownloadModel.ts`):
 
    ```typescript
    POST {endpoint}/api/pull
-   Body: { name: "codellama:7b-code" }
+   Body: { name: "qwen2.5-coder:7b" }
    → Streaming JSON with status/progress
    ```
 
@@ -849,11 +847,11 @@ Add to `package.json` configuration section:
    ```bash
    # vLLM example
    python -m vllm.entrypoints.openai.api_server \
-     --model codellama/CodeLlama-7b-hf \
+     --model Qwen/Qwen2.5-Coder-7B-Instruct \
      --port 8000
 
    # llama.cpp example
-   ./server -m models/codellama-7b.gguf --port 8080
+   ./server -m models/qwen2.5-coder-7b.gguf --port 8080
    ```
 
 2. **Configure extension:**

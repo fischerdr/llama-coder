@@ -155,9 +155,8 @@ This applies to all documentation including:
 
 Each model uses different special tokens to denote prefix/suffix/middle:
 
-- **CodeLlama**: `<PRE> prefix <SUF> suffix <MID>`
 - **DeepSeek**: `<｜fim▁begin｜>prefix<｜fim▁hole｜>suffix<｜fim▁end｜>`
-- **Stable Code**: `<fim_prefix>prefix<fim_suffix>suffix<fim_middle>`
+- **Qwen**: `<fim_prefix>prefix<fim_suffix>suffix<fim_middle>`
 
 When adding new models, implement the format in [prompts/processors/models.ts](src/prompts/processors/models.ts).
 
