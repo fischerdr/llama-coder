@@ -137,18 +137,18 @@
           },
           "inference.maxLines": {
             "type": "number",
-            "default": 16,
+            "default": 5,
             "minimum": 1,
             "maximum": 100,
-            "description": "Maximum number of lines to generate before stopping (when at top-level scope). Controls completion length. Recommended: 16-30. Higher values allow longer multi-line completions but may be slower.",
+            "description": "Maximum number of lines to generate before stopping (when at top-level scope). Controls completion length. Lower values (3-7) provide focused, single-statement completions. Higher values (10-30) allow longer multi-line blocks but may generate beyond immediate context.",
             "order": 6
           },
           "inference.maxTokens": {
             "type": "number",
-            "default": 256,
+            "default": 100,
             "minimum": 10,
             "maximum": 4096,
-            "description": "Maximum number of tokens (word pieces) the model will generate. Controls inference cost and completion length. Recommended: 256-512 for single completions, 1024+ for comprehensive multi-line suggestions. Too low (e.g., 5) will produce incomplete results.",
+            "description": "Maximum number of tokens (word pieces) the model will generate. Controls inference cost and completion length. Lower values (50-150) keep completions focused and fast. Higher values (256-512) allow comprehensive multi-line suggestions but may overshoot.",
             "order": 7
           },
           "inference.delay": {

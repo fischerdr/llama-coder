@@ -57,6 +57,18 @@ Trained on massive datasets with superior multi-language support. Qwen2.5 suppor
 
 **Recommendation**: Start with `qwen2.5-coder:7b` (default). Use larger models if you have more VRAM and want better quality. Use smaller models for faster completions on limited hardware.
 
+### Configuration Tips
+
+The extension defaults to focused, single-statement completions:
+
+- `maxLines: 5` - Completes the current statement plus a few surrounding lines
+- `maxTokens: 100` - Keeps completions fast and on-point
+
+For longer multi-line completions, increase these values in settings:
+
+- `maxLines: 10-30` for complete function bodies
+- `maxTokens: 256-512` for comprehensive blocks
+
 ## Troubleshooting
 
 Most of the problems could be seen in output of a plugin in VS Code extension output.
