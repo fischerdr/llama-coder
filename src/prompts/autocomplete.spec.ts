@@ -34,9 +34,9 @@ describe('autocomplete', () => {
             expect(result).not.toContain('<|endoftext|>');
         });
 
-        it('should strip <fim_prefix> token from Qwen completions', async () => {
+        it('should strip <|fim_prefix|> token from Qwen completions', async () => {
             mockOllamaTokenGenerator.mockImplementation(async function* () {
-                yield { model: 'qwen', response: 'return true<fim_prefix>', done: true };
+                yield { model: 'qwen', response: 'return true<|fim_prefix|>', done: true };
             });
 
             const result = await autocomplete({
@@ -52,7 +52,7 @@ describe('autocomplete', () => {
             });
 
             expect(result).toBe('return true');
-            expect(result).not.toContain('<fim_prefix>');
+            expect(result).not.toContain('<|fim_prefix|>');
         });
 
         it('should strip DeepSeek FIM tokens', async () => {

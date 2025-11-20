@@ -109,7 +109,7 @@ Migration path with time estimates (~1 week)
 │                                                                 │
 │  a) Format prompt using model-specific FIM template:           │
 │     - DeepSeek: <｜fim▁begin｜>...<｜fim▁hole｜>...<｜fim▁end｜>│
-│     - Qwen: <fim_prefix>...<fim_suffix>...<fim_middle>        │
+│     - Qwen: <|fim_prefix|>...<|fim_suffix|>...<|fim_middle|>  │
 │                                                                 │
 │  b) Build request payload:                                     │
 │     {                                                           │
@@ -300,8 +300,8 @@ config.inference → {
 // Before: { prefix, suffix, format }
 adaptPrompt({ prefix, suffix, format: 'qwen' })
 // After: {
-//   prompt: "<fim_prefix>prefix<fim_suffix>suffix<fim_middle>",
-//   stop: ["<|endoftext|>", "<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
+//   prompt: "<|fim_prefix|>prefix<|fim_suffix|>suffix<|fim_middle|>",
+//   stop: ["<|endoftext|>", "<|fim_prefix|>", "<|fim_suffix|>", "<|fim_middle|>"]
 // }
 ```
 
@@ -359,7 +359,7 @@ The most complex part. See [Streaming & Completion Logic](#streaming--completion
 | Format | Template | Stop Tokens |
 |--------|----------|-------------|
 | DeepSeek | `<｜fim▁begin｜>{prefix}<｜fim▁hole｜>{suffix}<｜fim▁end｜>` | `<｜fim▁begin｜>`, `<｜fim▁hole｜>`, `<｜fim▁end｜>` |
-| Qwen | `<fim_prefix>{prefix}<fim_suffix>{suffix}<fim_middle>` | `<\|endoftext\|>`, `<fim_prefix>`, `<fim_suffix>`, `<fim_middle>` |
+| Qwen | `<\|fim_prefix\|>{prefix}<\|fim_suffix\|>{suffix}<\|fim_middle\|>` | `<\|endoftext\|>`, `<\|fim_prefix\|>`, `<\|fim_suffix\|>`, `<\|fim_middle\|>` |
 
 **Critical Insight:** The model MUST be trained with the correct FIM format. Using the wrong template will produce garbage output.
 

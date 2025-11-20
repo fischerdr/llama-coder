@@ -82,7 +82,7 @@ describe('adaptPrompt', () => {
                 suffix: '}'
             });
 
-            expect(result.prompt).toBe('<fim_prefix>function baz()<fim_suffix>}<fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|>function baz()<|fim_suffix|>}<|fim_middle|>');
         });
 
         it('should include all Qwen stop tokens', () => {
@@ -92,7 +92,7 @@ describe('adaptPrompt', () => {
                 suffix: ';'
             });
 
-            expect(result.stop).toEqual(['<|endoftext|>', '<fim_prefix>', '<fim_suffix>', '<fim_middle>']);
+            expect(result.stop).toEqual(['<|endoftext|>', '<|fim_prefix|>', '<|fim_suffix|>', '<|fim_middle|>']);
             expect(result.stop).toHaveLength(4);
         });
 
@@ -113,9 +113,9 @@ describe('adaptPrompt', () => {
                 suffix: 'test'
             });
 
-            expect(result.stop).toContain('<fim_prefix>');
-            expect(result.stop).toContain('<fim_suffix>');
-            expect(result.stop).toContain('<fim_middle>');
+            expect(result.stop).toContain('<|fim_prefix|>');
+            expect(result.stop).toContain('<|fim_suffix|>');
+            expect(result.stop).toContain('<|fim_middle|>');
         });
 
         it('should handle empty prefix', () => {
@@ -125,7 +125,7 @@ describe('adaptPrompt', () => {
                 suffix: 'return x;'
             });
 
-            expect(result.prompt).toBe('<fim_prefix><fim_suffix>return x;<fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|><|fim_suffix|>return x;<|fim_middle|>');
         });
 
         it('should handle empty suffix', () => {
@@ -135,7 +135,7 @@ describe('adaptPrompt', () => {
                 suffix: ''
             });
 
-            expect(result.prompt).toBe('<fim_prefix>fn main() {<fim_suffix><fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|>fn main() {<|fim_suffix|><|fim_middle|>');
         });
 
         it('should preserve multiline content', () => {
@@ -145,7 +145,7 @@ describe('adaptPrompt', () => {
                 suffix: '\n    z\n}'
             });
 
-            expect(result.prompt).toBe('<fim_prefix>fn baz() {\n    let z = 3;\n    <fim_suffix>\n    z\n}<fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|>fn baz() {\n    let z = 3;\n    <|fim_suffix|>\n    z\n}<|fim_middle|>');
         });
 
         it('should handle both empty prefix and suffix', () => {
@@ -155,7 +155,7 @@ describe('adaptPrompt', () => {
                 suffix: ''
             });
 
-            expect(result.prompt).toBe('<fim_prefix><fim_suffix><fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|><|fim_suffix|><|fim_middle|>');
         });
 
         it('should preserve special characters in code', () => {
@@ -165,7 +165,7 @@ describe('adaptPrompt', () => {
                 suffix: 'console.log(regex);'
             });
 
-            expect(result.prompt).toBe('<fim_prefix>const regex = /[a-z]+/<fim_suffix>console.log(regex);<fim_middle>');
+            expect(result.prompt).toBe('<|fim_prefix|>const regex = /[a-z]+/<|fim_suffix|>console.log(regex);<|fim_middle|>');
         });
 
         it('should handle YAML/Ansible content', () => {
@@ -175,9 +175,9 @@ describe('adaptPrompt', () => {
                 suffix: '\n    enabled: true'
             });
 
-            expect(result.prompt).toContain('<fim_prefix>');
-            expect(result.prompt).toContain('<fim_suffix>');
-            expect(result.prompt).toContain('<fim_middle>');
+            expect(result.prompt).toContain('<|fim_prefix|>');
+            expect(result.prompt).toContain('<|fim_suffix|>');
+            expect(result.prompt).toContain('<|fim_middle|>');
             expect(result.prompt).toContain('ansible.builtin.service');
         });
     });
@@ -221,9 +221,9 @@ describe('adaptPrompt', () => {
         it('Qwen should use standard FIM tokens', () => {
             const result = adaptPrompt({ format: 'qwen', prefix: testPrefix, suffix: testSuffix });
 
-            expect(result.prompt).toContain('<fim_prefix>');
-            expect(result.prompt).toContain('<fim_suffix>');
-            expect(result.prompt).toContain('<fim_middle>');
+            expect(result.prompt).toContain('<|fim_prefix|>');
+            expect(result.prompt).toContain('<|fim_suffix|>');
+            expect(result.prompt).toContain('<|fim_middle|>');
         });
     });
 });
