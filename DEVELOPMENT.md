@@ -157,7 +157,7 @@ This runs the extension in a new VSCode window (Extension Development Host).
 1. **Open the project in VSCode:**
 
    ```bash
-   code /workspaces/llama-coder
+   code .  # or code /path/to/llama-coder
    ```
 
 2. **Compile the extension:**
@@ -710,12 +710,7 @@ yarn test:integration
    yarn watch
    ```
 
-3. **Keep dev container updated:**
-   ```bash
-   F1 → "Dev Containers: Rebuild Container"
-   ```
-
-4. **Test with multiple models:**
+3. **Test with multiple models:**
    - CodeLlama
    - Stable Code
    - DeepSeek

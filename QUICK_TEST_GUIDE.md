@@ -37,12 +37,13 @@ Test this branch in VSCode locally in under 5 minutes.
 
 ```bash
 # In terminal
-cd /workspaces/llama-coder
+cd llama-coder  # or wherever you cloned the repo
 git checkout fix/smart-filters-and-model-formatting
 yarn compile
 ```
 
 Then in VSCode:
+
 - Press `F5`
 - Wait for Extension Development Host window to open
 
@@ -51,6 +52,7 @@ Then in VSCode:
 In Extension Development Host window:
 
 **Test 1: Empty Line (30 seconds)**
+
 1. Create new file: `test.py`
 2. Press Enter to create empty line
 3. ✅ **VERIFY:** No ghost text on empty line
@@ -58,6 +60,7 @@ In Extension Development Host window:
 5. ✅ **VERIFY:** Ghost text appears on line with code
 
 **Test 2: Autocomplete Menu (30 seconds)**
+
 1. Type: `import math` + Enter
 2. Type: `x = math.`
 3. Press `Ctrl+Space` (opens VSCode menu)
@@ -67,6 +70,7 @@ In Extension Development Host window:
 7. ✅ **VERIFY:** Llama Coder ghost text now appears
 
 **Test 3: Markdown Files (30 seconds)**
+
 1. Create new file: `test.md`
 2. Type: `# Hello`
 3. ✅ **VERIFY:** No completions (unsupported language)
@@ -76,6 +80,7 @@ In Extension Development Host window:
 ### Step 3: Test Model Formatting (2 minutes)
 
 **Test CodeLlama (1 minute)**
+
 1. Settings (`Ctrl+,`) → Search "inference.model"
 2. Select: `codellama:7b-code-q4_K_M`
 3. In `test.py`, type: `def add(a, b):`
@@ -85,6 +90,7 @@ In Extension Development Host window:
 7. ✅ **VERIFY:** No strange tokens like `<EOT>` in the code
 
 **Test Stable Code (1 minute)**
+
 1. Settings → "inference.model"
 2. Select: `stable-code:3b-code-q4_0`
 3. Type: `class Calculator:`
@@ -156,17 +162,20 @@ yarn test
 ### ✅ What Should Work
 
 **Smart Filters:**
+
 - ✅ No completions on empty lines
 - ✅ No completions when VSCode menu is open
 - ✅ No completions in markdown/plaintext/log files
 - ✅ Completions work normally in code files
 
 **Model Formatting:**
+
 - ✅ CodeLlama completions have no stop tokens (`<EOT>`, `<END>`, `<EOD>`)
 - ✅ Stable Code completions have no FIM tokens (`<fim_prefix>`, etc.)
 - ✅ DeepSeek completions work without `<END>` token
 
 **Regressions:**
+
 - ✅ All previous features still work
 - ✅ Pause/resume works
 - ✅ All 65 unit tests pass
@@ -184,12 +193,14 @@ yarn test
 ## Troubleshooting
 
 **Extension not loading?**
+
 ```bash
 rm -rf out/ && yarn compile
 # Then press F5 again
 ```
 
 **No completions at all?**
+
 ```bash
 # Check Ollama
 curl http://localhost:11434/api/tags
@@ -202,6 +213,7 @@ ollama pull stable-code:3b-code-q4_0
 ```
 
 **Tests failing?**
+
 ```bash
 npx jest --clearCache
 yarn install
@@ -213,6 +225,7 @@ yarn test
 ## Done? ✅
 
 If all tests pass:
+
 - ✅ Smart filters reduce unnecessary completions
 - ✅ Model formatting improvements work
 - ✅ No regressions

@@ -73,7 +73,7 @@ This update implements two critical improvements to the Llama Coder extension:
 - `src/prompts/processors/models.spec.ts` (NEW)
 - `src/prompts/autocomplete.ts`
 - `src/prompts/autocomplete.spec.ts` (NEW)
-- `src/prompts/provider.ts` (auto-fixed semicolon)
+- `src/prompts/provider.ts` (added debug logging for model selection)
 
 #### A. CodeLlama Format
 
@@ -193,6 +193,23 @@ for (const stopToken of prompt.stop) {
 - Stable Code completions now correctly strip `<|endoftext|>` and FIM tokens
 - DeepSeek completions now correctly strip DeepSeek-specific tokens
 
+#### E. Debug Logging Enhancement
+
+**File:** `src/prompts/provider.ts`
+
+**Change:**
+
+```typescript
+// Added debug logging to help troubleshoot model selection issues
+info(`Using model: ${inferenceConfig.modelName} (format: ${inferenceConfig.modelFormat})`);
+```
+
+**Impact:**
+
+- Makes it easier to verify which model and format are being used
+- Helps troubleshoot configuration issues
+- Appears in Output panel ("Llama Coder") when completions run
+
 **Testing:**
 
 - Added 22 unit tests for model formatting
@@ -214,7 +231,7 @@ for (const stopToken of prompt.stop) {
 
 ## Test Results
 
-All tests pass successfully in dev container:
+All tests pass successfully:
 
 ```text
 Test Suites: 4 passed, 4 total
@@ -241,7 +258,7 @@ Time:        ~1.7s
 
 ## Git Commits
 
-Three clean, descriptive commits:
+Six commits total:
 
 1. **7e358ef** - `fix: enable smart filters to reduce unnecessary completions`
 
@@ -254,8 +271,21 @@ Three clean, descriptive commits:
    - Added: `src/prompts/processors/models.spec.ts` (22 tests)
 
 3. **85a55e8** - `fix: use dynamic stop token stripping for all model formats`
+
    - Modified: `src/prompts/autocomplete.ts`, `src/prompts/provider.ts`
    - Added: `src/prompts/autocomplete.spec.ts` (14 tests)
+
+4. **4504dd3** - `docs: add comprehensive testing and development guides`
+
+   - Added: `CHANGELOG_FILTERS_AND_FORMATTING.md`, `TESTING_CHECKLIST.md`, `QUICK_TEST_GUIDE.md`, `DEVELOPMENT.md`
+
+5. **8729bc0** - `refactor: remove dev container setup and update for local development only`
+
+   - Removed: `.devcontainer/`, updated documentation
+   - Added: `LOCAL_SETUP_GUIDE.md`
+
+6. **86211ca** - `docs: add local development setup guide`
+   - Enhanced local development documentation
 
 ---
 
@@ -415,7 +445,7 @@ Potential follow-up improvements identified during implementation:
 ## Version Information
 
 - **Extension Version:** 0.0.14 (target)
-- **Node Environment:** Dev container (Podman)
+- **Node Environment:** Local development
 - **Test Framework:** Jest with ts-jest
 - **TypeScript Version:** 5.2.2
 - **VSCode API:** ^1.84.0

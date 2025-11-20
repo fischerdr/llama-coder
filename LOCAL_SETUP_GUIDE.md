@@ -212,13 +212,14 @@ Tests:       65 passed, 65 total
 
 **Branch:** `fix/smart-filters-and-model-formatting`
 
-**Commits:** 5 total
+**Commits:** 6 total
 
 1. `7e358ef` - Enable smart filters
 2. `ad1c340` - Optimize model formatting
 3. `85a55e8` - Dynamic stop token stripping
-4. `4504dd3` - Add documentation
-5. `8729bc0` - Remove dev container (this commit)
+4. `4504dd3` - Add comprehensive testing and development guides
+5. `8729bc0` - Remove dev container setup and update for local development
+6. `86211ca` - Add local development setup guide
 
 **Changes:**
 

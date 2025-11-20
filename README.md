@@ -5,10 +5,11 @@ Llama Coder is a better and self-hosted Github Copilot replacement for [VS Code]
 [VS Code Plugin](https://marketplace.visualstudio.com/items?itemName=ex3ndr.llama-coder)
 
 ## Features
-* 🚀 As good as Copilot
-* ⚡️ Fast. Works well on consumer GPUs. Apple Silicon or RTX 4090 is recommended for best performance.
-* 🔐 No telemetry or tracking
-* 🔬 Works with any language coding or human one.
+
+- 🚀 As good as Copilot
+- ⚡️ Fast. Works well on consumer GPUs. Apple Silicon or RTX 4090 is recommended for best performance.
+- 🔐 No telemetry or tracking
+- 🔬 Works with any language coding or human one.
 
 ## Recommended hardware
 
@@ -30,7 +31,7 @@ Install [Ollama](https://ollama.ai) on dedicated machine and configure endpoint 
 Currently Llama Coder supports only Codellama. Model is quantized in different ways, but our tests shows that `q4` is an optimal way to run network. When selecting model the bigger the model is, it performs better. Always pick the model with the biggest size and the biggest possible quantization for your machine. Default one is `stable-code:3b-code-q4_0` and should work everywhere and outperforms most other models.
 
 | Name                      | RAM/VRAM | Notes |
-|---------------------------|----------|-------|
+| ------------------------- | -------- | ----- |
 | stable-code:3b-code-q4_0  | 3GB      |       |
 | codellama:7b-code-q4_K_M  | 5GB      |       |
 | codellama:7b-code-q6_K    | 6GB      | m     |
@@ -40,8 +41,8 @@ Currently Llama Coder supports only Codellama. Model is quantized in different w
 | codellama:34b-code-q4_K_M | 24GB     |       |
 | codellama:34b-code-q6_K   | 32GB     | m     |
 
-* m - slow on MacOS
-* g - slow on older NVidia cards (pre 30xx)
+- m - slow on MacOS
+- g - slow on older NVidia cards (pre 30xx)
 
 ## Troubleshooting
 
@@ -50,39 +51,54 @@ Most of the problems could be seen in output of a plugin in VS Code extension ou
 ## Changelog
 
 ## [0.0.14]
+
 - Ability to pause completition (by @bkyle)
+
 - Bearer token support for remote inference (by @Sinan-Karakaya)
 
 ## [0.0.13]
+
 - Fix remote files support
 
 ## [0.0.12]
+
 - Remote support
+
 - Fix codellama prompt preparation
 - Add trigger delay
 - Add jupyter notebooks support
 
 ## [0.0.11]
+
 - Added Stable Code model
+
 - Pause download only for specific model instead of all models
 
 ## [0.0.10]
+
 - Adding ability to pick a custom model
+
 - Asking user if they want to download model if it is not available
 
 ## [0.0.9]
+
 - Adding deepseek 1b model and making it default
 
 ## [0.0.8]
+
 - Improved DeepSeek support and language detection
 
 ## [0.0.7]
+
 - Added DeepSeek support
+
 - Ability to change temperature and top p
 - Fixed some bugs
 
 ## [0.0.6]
+
 - Fix ollama links
+
 - Added more models
 
 ## [0.0.4]

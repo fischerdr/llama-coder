@@ -116,6 +116,7 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
 
                     // Config
                     let inferenceConfig = config.inference;
+                    info(`Using model: ${inferenceConfig.modelName} (format: ${inferenceConfig.modelFormat})`);
 
                     // Update status
                     this.update('sync~spin', 'Llama Coder');
