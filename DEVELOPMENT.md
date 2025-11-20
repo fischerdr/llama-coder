@@ -22,18 +22,23 @@ This guide covers how to develop, test, and debug the Llama Coder extension loca
 - **Yarn**: v1.22.x (package manager)
 - **VSCode**: v1.84.0 or higher
 - **Git**: For version control
-- **Ollama**: For testing completions (or remote Ollama server)
+- **Ollama**: For testing completions
 
-### Optional (for dev container)
+### Installing Ollama
 
-- **Docker** or **Podman**: For containerized development
-- **VSCode Remote Containers extension**: For dev container support
+Download and install from: https://ollama.ai
+
+```bash
+# Verify Ollama is installed
+ollama --version
+
+# Start Ollama server
+ollama serve
+```
 
 ---
 
 ## Environment Setup
-
-### Option 1: Local Development (Direct)
 
 1. **Clone the repository:**
 
@@ -59,32 +64,6 @@ This guide covers how to develop, test, and debug the Llama Coder extension loca
 
    # Lint code
    yarn lint
-   ```
-
-### Option 2: Dev Container (Recommended for this project)
-
-This project includes a dev container configuration for consistent development environments.
-
-1. **Open in VSCode:**
-
-   ```bash
-   code llama-coder
-   ```
-
-2. **Open in dev container:**
-
-   - Press `F1` or `Ctrl+Shift+P`
-   - Select "Dev Containers: Reopen in Container"
-   - Wait for container to build and start
-
-3. **Inside the container:**
-
-   ```bash
-   # Dependencies should be auto-installed
-   yarn install
-
-   # Verify
-   yarn test
    ```
 
 ---
@@ -663,20 +642,6 @@ npx jest --updateSnapshot
    code --uninstall-extension ex3ndr.llama-coder
    ```
 
-### Issue 6: Dev Container Issues
-
-**Symptoms:**
-- Container won't build
-- Permission errors
-
-**Solutions:**
-```bash
-# Rebuild container
-F1 → "Dev Containers: Rebuild Container"
-
-# Or with Podman
-podman system prune -a
-```
 
 ---
 

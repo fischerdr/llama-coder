@@ -1,16 +1,33 @@
 # Quick Test Guide - 5 Minutes
 
-Test this branch in VSCode in under 5 minutes.
+Test this branch in VSCode locally in under 5 minutes.
 
 ## Prerequisites (One-time Setup)
 
-```bash
-# 1. Make sure Ollama is running
-curl http://localhost:11434/api/tags
+1. **Ollama installed and running:**
 
-# 2. Install a small test model (if not already)
-ollama pull stable-code:3b-code-q4_0
-```
+   ```bash
+   # Check if Ollama is running
+   curl http://localhost:11434/api/tags
+
+   # If not installed, download from: https://ollama.ai
+   # Then start it: ollama serve
+   ```
+
+2. **Install a small test model:**
+
+   ```bash
+   ollama pull stable-code:3b-code-q4_0
+   ```
+
+3. **Clone and setup the project:**
+
+   ```bash
+   git clone https://github.com/ex3ndr/llama-coder.git
+   cd llama-coder
+   git checkout fix/smart-filters-and-model-formatting
+   yarn install
+   ```
 
 ---
 
