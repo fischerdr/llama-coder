@@ -188,8 +188,8 @@ All configuration uses the `inference.*` namespace (defined in [package.json:73-
 - `bearerToken`: Authentication token for remote Ollama instances
 - `model`: Selected model from predefined list or "custom"
 - `temperature`: Sampling temperature (default: 0.2)
-- `maxLines`: Maximum completion lines (default: 16)
-- `maxTokens`: Maximum new tokens (default: 256)
+- `maxLines`: Maximum completion lines (default: 5)
+- `maxTokens`: Maximum new tokens (default: 100)
 - `delay`: Completion trigger delay in ms (default: 250, -1 disables)
 
 ## Testing Notes

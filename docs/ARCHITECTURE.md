@@ -118,7 +118,7 @@ Migration path with time estimates (~1 week)
 │       raw: true,                                               │
 │       options: {                                               │
 │         stop: ["<|endoftext|>", ...],                          │
-│         num_predict: 256,                                      │
+│         num_predict: 100,                                      │
 │         temperature: 0.2                                       │
 │       }                                                         │
 │     }                                                           │
