@@ -1,8 +1,0 @@
-{
-  "inference.endpoint": "",
-  "inference.model": "stable-code:3b-code-q4_0",
-  "inference.temperature": 0.2,
-  "inference.maxLines": 16,
-  "inference.maxTokens": 256,
-  "inference.delay": 250
-}
