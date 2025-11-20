@@ -130,6 +130,25 @@ The extension supports Jupyter notebooks with special handling:
 - Optionally includes cell outputs as comments for better context
 - See [preparePrompt.ts:32-89](src/prompts/preparePrompt.ts#L32-L89)
 
+## Communication Style
+
+When working with this codebase, maintain a formal, professional tone appropriate for enterprise environments. Emphasize maintainability, clarity, and operational soundness in all changes.
+
+### Documentation Standards
+
+**IMPORTANT:** Follow these rules when working with documentation:
+
+- **No emojis or icons** - Documentation must be professional and text-only
+- **Ask before creating** - Always ask the user for approval before generating or modifying documentation files
+- **No unsolicited documentation** - Never proactively create README files, markdown documentation, or similar without explicit user request
+
+This applies to all documentation including:
+
+- README files
+- Markdown documentation (*.md)
+- Code comments and docstrings (emojis prohibited)
+- Commit messages (emojis prohibited)
+
 ## Important Patterns
 
 ### FIM (Fill-In-Middle) Prompting
@@ -180,3 +199,45 @@ All configuration uses the `inference.*` namespace (defined in [package.json:73-
 - Test files use `.spec.ts` extension
 - Currently only one test file exists: [detectLanguage.spec.ts](src/prompts/processors/detectLanguage.spec.ts)
 - When adding tests, follow the existing pattern and ensure they're in the same directory as the code being tested
+
+### Expected Behavior
+
+When Claude Code modifies files, it should:
+
+1. Make the requested changes
+2. Automatically run the appropriate quality tools based on file type
+3. Fix any issues found by the tools
+4. Report the results to the user
+
+This ensures all code maintains consistent quality and follows project standards.
+
+## Git Commit Messages
+
+**IMPORTANT:** Do NOT add Claude Code attribution or co-authorship to commit messages.
+
+Commit messages should:
+
+- Follow conventional commit format when appropriate
+- Be concise and descriptive
+- Focus on the "why" rather than the "what"
+- Match the repository's existing commit style
+- **NOT include** any Claude Code branding, attribution, or co-authorship footers
+
+Bad example (DO NOT USE):
+
+```text
+Add new feature
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+Good example:
+
+```text
+Add etcd defragmentation monitoring
+
+Implements health check validation before and after defrag operations
+to ensure cluster stability.
+```
