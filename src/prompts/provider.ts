@@ -148,7 +148,7 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
                             // Perform download
                             this.update('sync~spin', 'Downloading');
                             await ollamaDownloadModel(inferenceConfig.endpoint, inferenceConfig.modelName, inferenceConfig.bearerToken);
-                            this.update('sync~spin', 'Llama Coder')
+                            this.update('sync~spin', 'Llama Coder');
                         }
                         if (token.isCancellationRequested) {
                             info(`Canceled after AI completion.`);

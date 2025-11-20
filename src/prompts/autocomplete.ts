@@ -91,9 +91,12 @@ export async function autocomplete(args: {
         }
     }
 
-    // Remove <EOT>
-    if (res.endsWith('<EOT>')) {
-        res = res.slice(0, res.length - 5);
+    // Remove any stop tokens from the end
+    for (const stopToken of prompt.stop) {
+        if (res.endsWith(stopToken)) {
+            res = res.slice(0, res.length - stopToken.length);
+            break;
+        }
     }
 
     // Trim ends of all lines since sometimes the AI completion will add extra spaces
