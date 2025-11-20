@@ -14,7 +14,7 @@ export function adaptPrompt(args: { format: ModelFormat, prefix: string, suffix:
     if (args.format === 'deepseek') {
         return {
             prompt: `<｜fim▁begin｜>${args.prefix}<｜fim▁hole｜>${args.suffix}<｜fim▁end｜>`,
-            stop: [`<｜fim▁begin｜>`, `<｜fim▁hole｜>`, `<｜fim▁end｜>`, `<END>`]
+            stop: [`<｜fim▁begin｜>`, `<｜fim▁hole｜>`, `<｜fim▁end｜>`]
         };
     }
 
@@ -22,13 +22,13 @@ export function adaptPrompt(args: { format: ModelFormat, prefix: string, suffix:
     if (args.format === 'stable-code') {
         return {
             prompt: `<fim_prefix>${args.prefix}<fim_suffix>${args.suffix}<fim_middle>`,
-            stop: [`<|endoftext|>`]
+            stop: [`<|endoftext|>`, `<fim_prefix>`, `<fim_suffix>`, `<fim_middle>`]
         };
     }
 
     // Codellama FIM
     return {
-        prompt: `<PRE> ${args.prefix} <SUF> ${args.suffix} <MID>`,
+        prompt: `<PRE>${args.prefix}<SUF>${args.suffix}<MID>`,
         stop: [`<END>`, `<EOD>`, `<EOT>`]
     };
 }
