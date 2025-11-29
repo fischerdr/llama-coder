@@ -1,13 +1,16 @@
 import vscode from 'vscode';
 import { info, warn } from '../modules/log';
-import { autocomplete } from './autocomplete';
 import { preparePrompt } from './preparePrompt';
 import { AsyncLock } from '../modules/lock';
-import { getFromPromptCache, setPromptToCache } from './promptCache';
 import { isNotNeeded, isSupported } from './filter';
-import { ollamaCheckModel } from '../modules/ollamaCheckModel';
-import { ollamaDownloadModel } from '../modules/ollamaDownloadModel';
 import { config } from '../config';
+import {
+	getCompletionService,
+	CompletionConfig,
+} from '../services/CompletionService';
+import { getReplacementAnalyzer } from './ReplacementAnalyzer';
+import { detectLanguage } from './processors/detectLanguage';
+import { InlineDecorationManager } from '../ui/InlineDecorationManager';
 
 type Status = {
     icon: string;
@@ -21,10 +24,12 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
     context: vscode.ExtensionContext;
     private _paused: boolean = false;
     private _status: Status = { icon: "chip", text: "Llama Coder" };
+    private decorationManager: InlineDecorationManager;
 
     constructor(statusbar: vscode.StatusBarItem, context: vscode.ExtensionContext) {
         this.statusbar = statusbar;
         this.context = context;
+        this.decorationManager = new InlineDecorationManager();
     }
     
     public set paused(value: boolean) {
@@ -102,89 +107,78 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
                     return;
                 }
 
-                // Result
+                // Get completion service and config
+                const completionService = getCompletionService();
+                const inferenceConfig = config.inference;
+                const filePath = document.uri.fsPath;
+
+                info(`Using model: ${inferenceConfig.modelName} (format: ${inferenceConfig.modelFormat})`);
+
+                // Build completion config
+                const completionConfig: CompletionConfig = {
+                    endpoint: inferenceConfig.endpoint,
+                    bearerToken: inferenceConfig.bearerToken,
+                    model: inferenceConfig.modelName,
+                    format: inferenceConfig.modelFormat,
+                    maxLines: inferenceConfig.maxLines,
+                    maxTokens: inferenceConfig.maxTokens,
+                    temperature: inferenceConfig.temperature,
+                };
+
+                // Check model exists (for Ollama backend)
+                this.update('sync~spin', 'Llama Coder');
                 let res: string | null = null;
 
-                // Check if in cache
-                let cached = getFromPromptCache({
-                    prefix: prepared.prefix,
-                    suffix: prepared.suffix
-                });
+                try {
+                    const modelExists = await completionService.checkModel(completionConfig);
+                    if (token.isCancellationRequested) {
+                        info(`Canceled after model check.`);
+                        return;
+                    }
 
-                // If not cached
-                if (cached === undefined) {
-
-                    // Config
-                    let inferenceConfig = config.inference;
-                    info(`Using model: ${inferenceConfig.modelName} (format: ${inferenceConfig.modelFormat})`);
-
-                    // Update status
-                    this.update('sync~spin', 'Llama Coder');
-                    try {
-
-                        // Check model exists
-                        let modelExists = await ollamaCheckModel(inferenceConfig.endpoint, inferenceConfig.modelName, inferenceConfig.bearerToken);
-                        if (token.isCancellationRequested) {
-                            info(`Canceled after AI completion.`);
+                    // Download model if not exists (Ollama only)
+                    if (!modelExists) {
+                        // Check if user asked to ignore download
+                        if (this.context.globalState.get('llama-coder-download-ignored') === inferenceConfig.modelName) {
+                            info(`Ignoring since user asked to ignore download.`);
                             return;
                         }
 
-                        // Download model if not exists
-                        if (!modelExists) {
-
-                            // Check if user asked to ignore download
-                            if (this.context.globalState.get('llama-coder-download-ignored') === inferenceConfig.modelName) {
-                                info(`Ingoring since user asked to ignore download.`);
-                                return;
-                            }
-
-                            // Ask for download
-                            let download = await vscode.window.showInformationMessage(`Model ${inferenceConfig.modelName} is not downloaded. Do you want to download it? Answering "No" would require you to manually download model.`, 'Yes', 'No');
-                            if (download === 'No') {
-                                info(`Ingoring since user asked to ignore download.`);
-                                this.context.globalState.update('llama-coder-download-ignored', inferenceConfig.modelName);
-                                return;
-                            }
-
-                            // Perform download
-                            this.update('sync~spin', 'Downloading');
-                            await ollamaDownloadModel(inferenceConfig.endpoint, inferenceConfig.modelName, inferenceConfig.bearerToken);
-                            this.update('sync~spin', 'Llama Coder');
-                        }
-                        if (token.isCancellationRequested) {
-                            info(`Canceled after AI completion.`);
+                        // Ask for download
+                        const download = await vscode.window.showInformationMessage(
+                            `Model ${inferenceConfig.modelName} is not downloaded. Do you want to download it? Answering "No" would require you to manually download model.`,
+                            'Yes',
+                            'No'
+                        );
+                        if (download === 'No') {
+                            info(`Ignoring since user asked to ignore download.`);
+                            this.context.globalState.update('llama-coder-download-ignored', inferenceConfig.modelName);
                             return;
                         }
 
-                        // Run AI completion
-                        info(`Running AI completion...`);
-                        res = await autocomplete({
-                            prefix: prepared.prefix,
-                            suffix: prepared.suffix,
-                            endpoint: inferenceConfig.endpoint,
-                            bearerToken: inferenceConfig.bearerToken,
-                            model: inferenceConfig.modelName,
-                            format: inferenceConfig.modelFormat,
-                            maxLines: inferenceConfig.maxLines,
-                            maxTokens: inferenceConfig.maxTokens,
-                            temperature: inferenceConfig.temperature,
-                            canceled: () => token.isCancellationRequested,
-                        });
-                        info(`AI completion completed: ${res}`);
+                        // Perform download
+                        this.update('sync~spin', 'Downloading');
+                        await completionService.downloadModel(completionConfig);
+                        this.update('sync~spin', 'Llama Coder');
+                    }
 
-                        // Put to cache
-                        setPromptToCache({
-                            prefix: prepared.prefix,
-                            suffix: prepared.suffix,
-                            value: res
-                        });
-                    } finally {
-                        this.update('chip', 'Llama Coder');
+                    if (token.isCancellationRequested) {
+                        info(`Canceled after model download.`);
+                        return;
                     }
-                } else {
-                    if (cached !== null) {
-                        res = cached;
-                    }
+
+                    // Run AI completion (includes caching, session management, scope detection)
+                    info(`Running AI completion...`);
+                    res = await completionService.complete(
+                        prepared.prefix,
+                        prepared.suffix,
+                        completionConfig,
+                        filePath,
+                        () => token.isCancellationRequested
+                    );
+                    info(`AI completion completed: ${res}`);
+                } finally {
+                    this.update('chip', 'Llama Coder');
                 }
                 if (token.isCancellationRequested) {
                     info(`Canceled after AI completion.`);
@@ -193,10 +187,83 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
 
                 // Return result
                 if (res && res.trim() !== '') {
-                    return [{
-                        insertText: res,
-                        range: new vscode.Range(position, position),
-                    }];
+                    try {
+                        // Use ReplacementAnalyzer for smart replacement
+                        const replacementAnalyzer = getReplacementAnalyzer();
+                        const completionConfig = config.completion;
+
+                        const analysis = replacementAnalyzer.analyze({
+                            document,
+                            position,
+                            prefix: prepared.prefix,
+                            suffix: prepared.suffix,
+                            completion: res,
+                            language: detectLanguage(document.uri.fsPath, document.languageId),
+                            enableReplacements: completionConfig.enableReplacements,
+                        });
+
+                        info(`Replacement decision: ${analysis.reason}`);
+                        info(`  shouldReplace: ${analysis.shouldReplace}, confidence: ${analysis.confidence.toFixed(2)}`);
+                        if (analysis.logicalUnitType) {
+                            info(`  logicalUnitType: ${analysis.logicalUnitType}`);
+                        }
+                        if (analysis.replaceRange) {
+                            info(`  range: L${analysis.replaceRange.start.line}-${analysis.replaceRange.end.line}`);
+                        }
+                        if (analysis.showVisualDiff) {
+                            info(`  showVisualDiff: true (${analysis.replacedLines} lines)`);
+                        }
+
+                        // Check if we should show visual diff decorations
+                        if (analysis.shouldReplace && analysis.showVisualDiff && analysis.replaceRange) {
+                            // Show visual diff with decorations instead of returning InlineCompletionItem
+                            info('Showing visual diff with decorations');
+
+                            // Get active text editor
+                            const activeEditor = vscode.window.activeTextEditor;
+                            if (!activeEditor || activeEditor.document !== document) {
+                                warn('Active editor does not match completion document');
+                                // Fall back to standard completion
+                                const replaceRange = analysis.replaceRange;
+                                return [{
+                                    insertText: analysis.insertText,
+                                    range: replaceRange,
+                                }];
+                            }
+
+                            // Clear any existing decorations first
+                            if (this.decorationManager.hasPendingEdit()) {
+                                this.decorationManager.clear(activeEditor);
+                            }
+
+                            // Show visual diff
+                            this.decorationManager.showVisualDiff(
+                                activeEditor,
+                                analysis.replaceRange,
+                                analysis.insertText
+                            );
+
+                            // Return empty array - decorations handle the visualization
+                            return [];
+                        }
+
+                        // Standard completion with optional replacement range
+                        const replaceRange = analysis.shouldReplace && analysis.replaceRange
+                            ? analysis.replaceRange
+                            : new vscode.Range(position, position);
+
+                        return [{
+                            insertText: analysis.insertText,
+                            range: replaceRange,
+                        }];
+                    } catch (error) {
+                        warn('ReplacementAnalyzer error, falling back to insert-only:', error);
+                        // Fallback: insert-only mode
+                        return [{
+                            insertText: res,
+                            range: new vscode.Range(position, position),
+                        }];
+                    }
                 }
 
                 // Nothing to complete

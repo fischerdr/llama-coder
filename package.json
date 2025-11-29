@@ -51,6 +51,58 @@
       {
         "command": "llama.toggle",
         "title": "Llama Coder: Toggle"
+      },
+      {
+        "command": "llama.rewrite",
+        "title": "Llama Coder: Rewrite Selection"
+      },
+      {
+        "command": "llama.rewriteCustom",
+        "title": "Llama Coder: Custom Rewrite..."
+      },
+      {
+        "command": "llama.acceptRewrite",
+        "title": "Llama Coder: Accept Rewrite"
+      },
+      {
+        "command": "llama.rejectRewrite",
+        "title": "Llama Coder: Reject Rewrite"
+      },
+      {
+        "command": "llama.showRewriteDiff",
+        "title": "Llama Coder: Show Rewrite Diff"
+      },
+      {
+        "command": "llama-coder.acceptInlineEdit",
+        "title": "Llama Coder: Accept Inline Edit"
+      },
+      {
+        "command": "llama-coder.rejectInlineEdit",
+        "title": "Llama Coder: Reject Inline Edit"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "llama.acceptRewrite",
+        "key": "ctrl+shift+y",
+        "mac": "cmd+shift+y",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "llama.rejectRewrite",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "llama-coder.acceptInlineEdit",
+        "key": "tab",
+        "when": "editorTextFocus && llama-coder.inlineEditPending"
+      },
+      {
+        "command": "llama-coder.rejectInlineEdit",
+        "key": "escape",
+        "when": "editorTextFocus && llama-coder.inlineEditPending"
       }
     ],
     "configuration": [
@@ -174,6 +226,20 @@
             "maximum": 100000,
             "description": "Maximum characters of code before cursor to include as context. Prefix (history) is generally more useful than suffix. Higher values provide more context but increase prompt size and inference time. Recommended: 10000-20000.",
             "order": 10
+          },
+          "completion.enableReplacements": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable smart replacement mode. When true, completions may replace existing code instead of just inserting. Useful for refactoring (e.g., 'shell:' → 'ansible.builtin.shell:'). Supports YAML and Python with language-aware scope detection.",
+            "order": 11
+          },
+          "completion.minConfidence": {
+            "type": "number",
+            "default": 0.6,
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Minimum confidence (0-1) required to replace code. Lower values (0.4-0.6) = more aggressive replacement. Higher values (0.7-0.9) = more conservative, only replace when very confident. Recommended: 0.6.",
+            "order": 12
           }
         }
       }

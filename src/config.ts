@@ -54,6 +54,18 @@ class Config {
         };
     }
 
+    // Completion
+    get completion() {
+        let config = vscode.workspace.getConfiguration('completion');
+
+        let enableReplacements = config.get('enableReplacements') as boolean;
+        let minConfidence = config.get('minConfidence') as number;
+        return {
+            enableReplacements,
+            minConfidence,
+        };
+    }
+
     // Notebook
     get notebook() {
         let config = vscode.workspace.getConfiguration('notebook');
