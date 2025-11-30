@@ -151,7 +151,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 				const prevIndent = this.getIndentLevel(prevText);
 
 				console.log(`[YamlAdapter] ✓ Positional mode activated! Previous line matched, prevIndent=${prevIndent}`);
-				console.log(`[YamlAdapter] Searching forward from L${cursorLine + 1} for block at indent ${prevIndent}...`);
+				console.log(`[YamlAdapter] Searching forward from L${cursorLine + 1} for children (indent > ${prevIndent})...`);
 
 				for (let i = cursorLine + 1; i < document.lineCount; i++) {
 					const line = document.lineAt(i);
@@ -166,8 +166,8 @@ export class YamlScopeAdapter implements IScopeAdapter {
 					const lineIndent = this.getIndentLevel(lineText);
 					console.log(`[YamlAdapter]   L${i + 1} (indent=${lineIndent}): "${lineText.substring(0, 60)}${lineText.length > 60 ? '...' : ''}"`);
 
-					// If we find content at same indent, this is the old block to replace
-					if (lineIndent === prevIndent) {
+					// If we find content indented more than the key, this is a child block to replace
+					if (lineIndent > prevIndent) {
 						const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
 						if (keyMatch) {
 							// Found an old key-value block at same indent - replace it!
