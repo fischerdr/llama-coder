@@ -166,19 +166,31 @@ export class PythonScopeAdapter implements IScopeAdapter {
 		const cursorLine = context.position.line;
 		const targetIndent = unit.indentLevel ?? 0;
 
+		console.log(`[PythonAdapter] findFunctionRange: cursorLine=${cursorLine}, targetIndent=${targetIndent}, function="${unit.identifier}"`);
+
 		// Special case: If cursor is on a blank line after a function definition (e.g., after pressing Enter),
 		// look for the NEXT function/block at the same indent to replace (positional replacement)
 		const currentLineText = document.lineAt(cursorLine).text.trim();
 		const previousLine = cursorLine > 0 ? document.lineAt(cursorLine - 1) : null;
 
+		console.log(`[PythonAdapter] Positional check: currentLineText="${currentLineText}"`);
+		if (previousLine) {
+			console.log(`[PythonAdapter] Previous line (L${cursorLine}): "${previousLine.text}"`);
+		}
+
 		if (currentLineText === '' && previousLine) {
 			const prevText = previousLine.text;
 			const prevDefMatch = prevText.match(/^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)\s*\(.*\)\s*:\s*$/);
+
+			console.log(`[PythonAdapter] Testing positional replacement, prevDefMatch:`, prevDefMatch);
 
 			if (prevDefMatch) {
 				// Previous line was a function def with just a colon (e.g., "def foo():")
 				// Look for next function/block at same indent to replace
 				const prevIndent = this.getIndentLevel(prevText);
+
+				console.log(`[PythonAdapter] ✓ Positional mode activated! Previous line matched, prevIndent=${prevIndent}`);
+				console.log(`[PythonAdapter] Searching forward from L${cursorLine + 1} for function/class at indent ${prevIndent}...`);
 
 				for (let i = cursorLine + 1; i < document.lineCount; i++) {
 					const line = document.lineAt(i);
@@ -186,33 +198,59 @@ export class PythonScopeAdapter implements IScopeAdapter {
 
 					// Skip empty lines and comments
 					if (lineText.trim() === '' || lineText.trim().startsWith('#')) {
+						console.log(`[PythonAdapter]   L${i + 1}: Skip (empty/comment)`);
 						continue;
 					}
 
 					const lineIndent = this.getIndentLevel(lineText);
+					console.log(`[PythonAdapter]   L${i + 1} (indent=${lineIndent}): "${lineText.substring(0, 60)}${lineText.length > 60 ? '...' : ''}"`);
 
 					// If we find a function at same indent, this is the old block to replace
 					if (lineIndent === prevIndent) {
 						const funcMatch = lineText.match(/^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)\s*\(/);
 						const classMatch = lineText.match(/^\s*class\s+([a-zA-Z_]\w*)/);
 
-						if (funcMatch || classMatch) {
-							// Found an old function/class at same indent - replace it!
-							return this.findBlockRangeFromLine(document, i, prevIndent);
+						if (funcMatch) {
+							console.log(`[PythonAdapter]   ✓ Found old function at L${i + 1}, name="${funcMatch[1]}"`);
+							const range = this.findBlockRangeFromLine(document, i, prevIndent);
+							console.log(`[PythonAdapter]   DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
+							const deletedText = document.getText(range);
+							console.log(`[PythonAdapter]   DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `      L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
+							return range;
+						} else if (classMatch) {
+							console.log(`[PythonAdapter]   ✓ Found old class at L${i + 1}, name="${classMatch[1]}"`);
+							const range = this.findBlockRangeFromLine(document, i, prevIndent);
+							console.log(`[PythonAdapter]   DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
+							const deletedText = document.getText(range);
+							console.log(`[PythonAdapter]   DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `      L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
+							return range;
 						}
+						console.log(`[PythonAdapter]   Line at same indent but not a function/class`);
 					}
 
 					// If we hit something at lower indent, stop searching
 					if (lineIndent < prevIndent) {
+						console.log(`[PythonAdapter]   Hit lower indent (${lineIndent} < ${prevIndent}), stopping search`);
 						break;
 					}
 				}
+				console.log(`[PythonAdapter] ✗ Positional search complete, no matching function/class found`);
+			} else {
+				console.log(`[PythonAdapter] ✗ Previous line doesn't match function def pattern`);
+			}
+		} else {
+			if (currentLineText !== '') {
+				console.log(`[PythonAdapter] Not positional mode: current line not empty`);
+			} else if (!previousLine) {
+				console.log(`[PythonAdapter] Not positional mode: no previous line`);
 			}
 		}
 
 		// Standard case: Search backward for function definition
+		console.log(`[PythonAdapter] Starting standard function search for "${unit.identifier}" at indent ${targetIndent}...`);
 		let defLine = -1;
 
+		console.log(`[PythonAdapter] Searching backward from L${cursorLine}...`);
 		for (let i = cursorLine; i >= 0; i--) {
 			const line = document.lineAt(i);
 			const lineText = line.text;
@@ -226,6 +264,7 @@ export class PythonScopeAdapter implements IScopeAdapter {
 
 			// If we've gone past our indent level, stop
 			if (lineIndent < targetIndent) {
+				console.log(`[PythonAdapter]   L${i + 1}: Hit lower indent (${lineIndent} < ${targetIndent}), stopping search`);
 				break;
 			}
 
@@ -234,18 +273,25 @@ export class PythonScopeAdapter implements IScopeAdapter {
 				const funcMatch = lineText.match(
 					/^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)\s*\(/
 				);
-				if (funcMatch && funcMatch[1] === unit.identifier) {
-					defLine = i;
-					break;
+				if (funcMatch) {
+					const matches = funcMatch[1] === unit.identifier;
+					console.log(`[PythonAdapter]   L${i + 1} (indent=${lineIndent}): function="${funcMatch[1]}", matches=${matches}`);
+					if (matches) {
+						defLine = i;
+						console.log(`[PythonAdapter]   ✓ Found matching function at L${i + 1}`);
+						break;
+					}
 				}
 			}
 		}
 
 		if (defLine === -1) {
+			console.log(`[PythonAdapter] ✗ Function not found`);
 			return null; // Function not found
 		}
 
 		// Search backward for decorators
+		console.log(`[PythonAdapter] Searching backward for decorators from L${defLine}...`);
 		let startLine = defLine;
 		for (let i = defLine - 1; i >= 0; i--) {
 			const line = document.lineAt(i);
@@ -260,11 +306,13 @@ export class PythonScopeAdapter implements IScopeAdapter {
 
 			// Stop if indent is less than target
 			if (lineIndent < targetIndent) {
+				console.log(`[PythonAdapter]   L${i + 1}: Hit lower indent, stopping decorator search`);
 				break;
 			}
 
 			// Check if this is a decorator at same indent
 			if (lineIndent === targetIndent && lineText.trim().startsWith('@')) {
+				console.log(`[PythonAdapter]   L${i + 1}: Found decorator`);
 				startLine = i;
 			} else {
 				break; // Not a decorator, stop searching
@@ -272,6 +320,7 @@ export class PythonScopeAdapter implements IScopeAdapter {
 		}
 
 		// Find the end of the function body
+		console.log(`[PythonAdapter] Finding function body end from L${defLine + 1}...`);
 		let endLine = defLine;
 		for (let i = defLine + 1; i < document.lineCount; i++) {
 			const line = document.lineAt(i);
@@ -286,6 +335,7 @@ export class PythonScopeAdapter implements IScopeAdapter {
 
 			// If indent returns to same or lower level, we've found the end
 			if (lineIndent <= targetIndent) {
+				console.log(`[PythonAdapter]   L${i + 1}: Found end at indent ${lineIndent}`);
 				break;
 			}
 
@@ -293,10 +343,14 @@ export class PythonScopeAdapter implements IScopeAdapter {
 		}
 
 		// Create range from first decorator (or def line) to end of body
-		return new vscode.Range(
+		const range = new vscode.Range(
 			new vscode.Position(startLine, 0),
 			new vscode.Position(endLine, document.lineAt(endLine).text.length)
 		);
+		console.log(`[PythonAdapter] ✓ DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
+		const deletedText = document.getText(range);
+		console.log(`[PythonAdapter] DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `    L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
+		return range;
 	}
 
 	/**
