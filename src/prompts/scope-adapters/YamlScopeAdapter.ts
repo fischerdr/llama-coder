@@ -127,19 +127,31 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		const cursorLine = context.position.line;
 		const targetIndent = unit.indentLevel ?? 0;
 
+		console.log(`[YamlAdapter] findKeyValueBlockRange: cursorLine=${cursorLine}, targetIndent=${targetIndent}, key="${unit.identifier}"`);
+
 		// Special case: If cursor is on a blank/nearly-blank line after a key (e.g., after pressing Enter),
 		// look for the NEXT non-empty block at the same indent to replace (positional replacement)
 		const currentLineText = document.lineAt(cursorLine).text.trim();
 		const previousLine = cursorLine > 0 ? document.lineAt(cursorLine - 1) : null;
 
+		console.log(`[YamlAdapter] Positional check: currentLineText="${currentLineText}"`);
+		if (previousLine) {
+			console.log(`[YamlAdapter] Previous line (L${cursorLine}): "${previousLine.text}"`);
+		}
+
 		if (currentLineText === '' && previousLine) {
 			const prevText = previousLine.text;
 			const prevKeyMatch = prevText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:\s*$/);
+
+			console.log(`[YamlAdapter] Testing positional replacement, prevKeyMatch:`, prevKeyMatch);
 
 			if (prevKeyMatch) {
 				// Previous line was a key with just a colon (e.g., "  ansible.builtin.shell:")
 				// Look for next block at same indent to replace
 				const prevIndent = this.getIndentLevel(prevText);
+
+				console.log(`[YamlAdapter] ✓ Positional mode activated! Previous line matched, prevIndent=${prevIndent}`);
+				console.log(`[YamlAdapter] Searching forward from L${cursorLine + 1} for block at indent ${prevIndent}...`);
 
 				for (let i = cursorLine + 1; i < document.lineCount; i++) {
 					const line = document.lineAt(i);
@@ -147,32 +159,52 @@ export class YamlScopeAdapter implements IScopeAdapter {
 
 					// Skip empty lines and comments
 					if (lineText.trim() === '' || lineText.trim().startsWith('#')) {
+						console.log(`[YamlAdapter]   L${i + 1}: Skip (empty/comment)`);
 						continue;
 					}
 
 					const lineIndent = this.getIndentLevel(lineText);
+					console.log(`[YamlAdapter]   L${i + 1} (indent=${lineIndent}): "${lineText.substring(0, 60)}${lineText.length > 60 ? '...' : ''}"`);
 
 					// If we find content at same indent, this is the old block to replace
 					if (lineIndent === prevIndent) {
 						const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
 						if (keyMatch) {
 							// Found an old key-value block at same indent - replace it!
-							return this.findBlockRange(document, i, prevIndent);
+							console.log(`[YamlAdapter]   ✓ Found old block at L${i + 1}, key="${keyMatch[2]}"`);
+							const range = this.findBlockRange(document, i, prevIndent);
+							console.log(`[YamlAdapter]   DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
+							const deletedText = document.getText(range);
+							console.log(`[YamlAdapter]   DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `      L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
+							return range;
 						}
+						console.log(`[YamlAdapter]   Line at same indent but not a key-value block`);
 					}
 
 					// If we hit something at lower indent, stop searching
 					if (lineIndent < prevIndent) {
+						console.log(`[YamlAdapter]   Hit lower indent (${lineIndent} < ${prevIndent}), stopping search`);
 						break;
 					}
 				}
+				console.log(`[YamlAdapter] ✗ Positional search complete, no matching block found`);
+			} else {
+				console.log(`[YamlAdapter] ✗ Previous line doesn't match key pattern`);
+			}
+		} else {
+			if (currentLineText !== '') {
+				console.log(`[YamlAdapter] Not positional mode: current line not empty`);
+			} else if (!previousLine) {
+				console.log(`[YamlAdapter] Not positional mode: no previous line`);
 			}
 		}
 
 		// Standard case: Search backward and forward for matching key at same indent
+		console.log(`[YamlAdapter] Starting standard key search for "${unit.identifier}" at indent ${targetIndent}...`);
 		let matchLine = -1;
 
 		// Search backward from cursor
+		console.log(`[YamlAdapter] Searching backward from L${cursorLine}...`);
 		for (let i = cursorLine; i >= 0; i--) {
 			const line = document.lineAt(i);
 			const lineText = line.text;
@@ -186,21 +218,28 @@ export class YamlScopeAdapter implements IScopeAdapter {
 
 			// If we've gone past our indent level, stop searching
 			if (lineIndent < targetIndent) {
+				console.log(`[YamlAdapter]   L${i + 1}: Hit lower indent (${lineIndent} < ${targetIndent}), stopping backward search`);
 				break;
 			}
 
 			// Check if this line matches our key at the same indent
 			if (lineIndent === targetIndent) {
 				const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
-				if (keyMatch && this.keysMatch(keyMatch[2], unit.identifier)) {
-					matchLine = i;
-					break;
+				if (keyMatch) {
+					const matches = this.keysMatch(keyMatch[2], unit.identifier);
+					console.log(`[YamlAdapter]   L${i + 1} (indent=${lineIndent}): key="${keyMatch[2]}", matches=${matches}`);
+					if (matches) {
+						matchLine = i;
+						console.log(`[YamlAdapter]   ✓ Found matching key at L${i + 1}`);
+						break;
+					}
 				}
 			}
 		}
 
 		// If not found backward, search forward
 		if (matchLine === -1) {
+			console.log(`[YamlAdapter] Not found backward, searching forward from L${cursorLine + 1}...`);
 			for (let i = cursorLine + 1; i < document.lineCount; i++) {
 				const line = document.lineAt(i);
 				const lineText = line.text;
@@ -214,25 +253,33 @@ export class YamlScopeAdapter implements IScopeAdapter {
 
 				// If we've gone past our indent level, stop searching
 				if (lineIndent < targetIndent) {
+					console.log(`[YamlAdapter]   L${i + 1}: Hit lower indent (${lineIndent} < ${targetIndent}), stopping forward search`);
 					break;
 				}
 
 				// Check if this line matches our key at the same indent
 				if (lineIndent === targetIndent) {
 					const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
-					if (keyMatch && this.keysMatch(keyMatch[2], unit.identifier)) {
-						matchLine = i;
-						break;
+					if (keyMatch) {
+						const matches = this.keysMatch(keyMatch[2], unit.identifier);
+						console.log(`[YamlAdapter]   L${i + 1} (indent=${lineIndent}): key="${keyMatch[2]}", matches=${matches}`);
+						if (matches) {
+							matchLine = i;
+							console.log(`[YamlAdapter]   ✓ Found matching key at L${i + 1}`);
+							break;
+						}
 					}
 				}
 			}
 		}
 
 		if (matchLine === -1) {
+			console.log(`[YamlAdapter] ✗ No matching key found`);
 			return null; // No matching key found
 		}
 
 		// Find the end of the block (where indent returns to same or lower level)
+		console.log(`[YamlAdapter] Finding block end from L${matchLine + 1}...`);
 		let endLine = matchLine;
 		for (let i = matchLine + 1; i < document.lineCount; i++) {
 			const line = document.lineAt(i);
@@ -247,6 +294,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 
 			// If indent returns to same or lower level, we've found the end
 			if (lineIndent <= targetIndent) {
+				console.log(`[YamlAdapter]   L${i + 1}: Found end at indent ${lineIndent}`);
 				break;
 			}
 
@@ -254,10 +302,14 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		}
 
 		// Create range from start of key line to end of block
-		return new vscode.Range(
+		const range = new vscode.Range(
 			new vscode.Position(matchLine, 0),
 			new vscode.Position(endLine, document.lineAt(endLine).text.length)
 		);
+		console.log(`[YamlAdapter] ✓ DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
+		const deletedText = document.getText(range);
+		console.log(`[YamlAdapter] DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `    L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
+		return range;
 	}
 
 	/**
