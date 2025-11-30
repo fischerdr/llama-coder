@@ -22,16 +22,13 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		const textAfterCursor = line.text.substring(context.position.character);
 
 		// Special case: If we're typing a YAML key at the start of a line
-		// (e.g., "  ansible.builtin." when there's "shell: ..." after cursor),
+		// (e.g., "  ansible.builtin." when there's "  shell: ..." after cursor),
 		// this is likely a replacement scenario, NOT incomplete
 		const typingKeyMatch = textBeforeCursor.match(/^\s*([a-zA-Z_][\w.-]*)$/);
 		if (typingKeyMatch) {
-			// We're typing a key name. Check if there's an existing key-value after cursor
-			const existingKeyAfter = textAfterCursor.match(/^([a-zA-Z_][\w.-]*)\s*:/);
-			if (existingKeyAfter) {
-				// We're typing a new key before an existing key - this is replacement!
-				return false;
-			}
+			// We're typing a key name at the start of a line
+			// This is a replacement scenario, not incomplete - allow it
+			return false;
 		}
 
 		// If we're on a complete YAML key line (e.g., "  shell:" or "  ansible.builtin.shell:"),
@@ -42,14 +39,19 @@ export class YamlScopeAdapter implements IScopeAdapter {
 			return false;
 		}
 
-		// Check if there's non-comment text after cursor that's NOT part of a key-value pair
-		const trimmedAfter = textAfterCursor.trim();
-		if (trimmedAfter && !trimmedAfter.startsWith('#')) {
-			// If it starts with a colon, we might be mid-key
-			if (trimmedAfter.startsWith(':')) {
-				return false; // Colon right after cursor, we're completing a key
-			}
-			return true; // Other text after cursor = incomplete
+		// Check if we're in the middle of a key (e.g., "  sh|ell:")
+		// where | is the cursor and there's part of the key after it
+		const midKeyMatch = textBeforeCursor.match(/^\s*([a-zA-Z_][\w.-]*)$/);
+		if (midKeyMatch && textAfterCursor.match(/^([a-zA-Z_][\w.-]*)/)) {
+			// We're mid-key, this is incomplete
+			return true;
+		}
+
+		// Check if there's a quote or bracket that's unclosed
+		const unclosedQuote = (textBeforeCursor.match(/"/g) || []).length % 2 !== 0;
+		const unclosedSingleQuote = (textBeforeCursor.match(/'/g) || []).length % 2 !== 0;
+		if (unclosedQuote || unclosedSingleQuote) {
+			return true; // Inside a string literal
 		}
 
 		return false;
