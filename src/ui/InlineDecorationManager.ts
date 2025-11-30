@@ -55,6 +55,19 @@ export class InlineDecorationManager {
 		// Clear any existing decorations first
 		this.clear(editor);
 
+		// Log what we're showing
+		const document = editor.document;
+		const deletedText = document.getText(deleteRange);
+		const deletedLines = deleteRange.end.line - deleteRange.start.line + 1;
+
+		console.log('=== VISUAL DIFF ===');
+		console.log(`Delete range: L${deleteRange.start.line + 1}-L${deleteRange.end.line + 1} (${deletedLines} lines)`);
+		console.log(`Deleted text (${deletedText.length} chars):`);
+		console.log(deletedText.split('\n').map((line, i) => `  ${i + 1}: ${line}`).join('\n'));
+		console.log(`\nGhost text (${insertText.length} chars):`);
+		console.log(insertText.split('\n').map((line, i) => `  ${i + 1}: ${line}`).join('\n'));
+		console.log('===================');
+
 		// 1. Apply strikethrough to ENTIRE delete range (all lines)
 		editor.setDecorations(this.deletionDecoration, [deleteRange]);
 

@@ -217,7 +217,20 @@ export class PromptProvider implements vscode.InlineCompletionItemProvider {
                         // Check if we should show visual diff decorations
                         if (analysis.shouldReplace && analysis.showVisualDiff && analysis.replaceRange) {
                             // Show visual diff with decorations instead of returning InlineCompletionItem
-                            info('Showing visual diff with decorations');
+                            info('=== VISUAL DIFF TRIGGERED ===');
+                            info(`  Replace: L${analysis.replaceRange.start.line + 1}-L${analysis.replaceRange.end.line + 1}`);
+                            info(`  Lines being replaced: ${analysis.replacedLines}`);
+                            info(`  Confidence: ${analysis.confidence.toFixed(2)}`);
+                            info(`  Logical unit: ${analysis.logicalUnitType}`);
+
+                            // Get the text being replaced
+                            const deletedText = document.getText(analysis.replaceRange);
+                            const deletedPreview = deletedText.substring(0, 100).replace(/\n/g, '\\n');
+                            const insertPreview = analysis.insertText.substring(0, 100).replace(/\n/g, '\\n');
+
+                            info(`  Delete: "${deletedPreview}${deletedText.length > 100 ? '...' : ''}"`);
+                            info(`  Insert: "${insertPreview}${analysis.insertText.length > 100 ? '...' : ''}"`);
+                            info('==============================');
 
                             // Get active text editor
                             const activeEditor = vscode.window.activeTextEditor;
