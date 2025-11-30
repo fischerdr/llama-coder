@@ -127,7 +127,49 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		const cursorLine = context.position.line;
 		const targetIndent = unit.indentLevel ?? 0;
 
-		// Search backward and forward for matching key at same indent
+		// Special case: If cursor is on a blank/nearly-blank line after a key (e.g., after pressing Enter),
+		// look for the NEXT non-empty block at the same indent to replace (positional replacement)
+		const currentLineText = document.lineAt(cursorLine).text.trim();
+		const previousLine = cursorLine > 0 ? document.lineAt(cursorLine - 1) : null;
+
+		if (currentLineText === '' && previousLine) {
+			const prevText = previousLine.text;
+			const prevKeyMatch = prevText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:\s*$/);
+
+			if (prevKeyMatch) {
+				// Previous line was a key with just a colon (e.g., "  ansible.builtin.shell:")
+				// Look for next block at same indent to replace
+				const prevIndent = this.getIndentLevel(prevText);
+
+				for (let i = cursorLine + 1; i < document.lineCount; i++) {
+					const line = document.lineAt(i);
+					const lineText = line.text;
+
+					// Skip empty lines and comments
+					if (lineText.trim() === '' || lineText.trim().startsWith('#')) {
+						continue;
+					}
+
+					const lineIndent = this.getIndentLevel(lineText);
+
+					// If we find content at same indent, this is the old block to replace
+					if (lineIndent === prevIndent) {
+						const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
+						if (keyMatch) {
+							// Found an old key-value block at same indent - replace it!
+							return this.findBlockRange(document, i, prevIndent);
+						}
+					}
+
+					// If we hit something at lower indent, stop searching
+					if (lineIndent < prevIndent) {
+						break;
+					}
+				}
+			}
+		}
+
+		// Standard case: Search backward and forward for matching key at same indent
 		let matchLine = -1;
 
 		// Search backward from cursor
@@ -281,6 +323,42 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		}
 
 		// Create range from start of list item to end of block
+		return new vscode.Range(
+			new vscode.Position(matchLine, 0),
+			new vscode.Position(endLine, document.lineAt(endLine).text.length)
+		);
+	}
+
+	/**
+	 * Find the range of a block starting at matchLine with given indent
+	 */
+	private findBlockRange(
+		document: vscode.TextDocument,
+		matchLine: number,
+		targetIndent: number
+	): vscode.Range {
+		// Find the end of the block (where indent returns to same or lower level)
+		let endLine = matchLine;
+		for (let i = matchLine + 1; i < document.lineCount; i++) {
+			const line = document.lineAt(i);
+			const lineText = line.text;
+
+			// Skip empty lines
+			if (lineText.trim() === '') {
+				continue;
+			}
+
+			const lineIndent = this.getIndentLevel(lineText);
+
+			// If indent returns to same or lower level, we've found the end
+			if (lineIndent <= targetIndent) {
+				break;
+			}
+
+			endLine = i;
+		}
+
+		// Create range from start of key line to end of block
 		return new vscode.Range(
 			new vscode.Position(matchLine, 0),
 			new vscode.Position(endLine, document.lineAt(endLine).text.length)

@@ -166,7 +166,51 @@ export class PythonScopeAdapter implements IScopeAdapter {
 		const cursorLine = context.position.line;
 		const targetIndent = unit.indentLevel ?? 0;
 
-		// Search backward for function definition
+		// Special case: If cursor is on a blank line after a function definition (e.g., after pressing Enter),
+		// look for the NEXT function/block at the same indent to replace (positional replacement)
+		const currentLineText = document.lineAt(cursorLine).text.trim();
+		const previousLine = cursorLine > 0 ? document.lineAt(cursorLine - 1) : null;
+
+		if (currentLineText === '' && previousLine) {
+			const prevText = previousLine.text;
+			const prevDefMatch = prevText.match(/^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)\s*\(.*\)\s*:\s*$/);
+
+			if (prevDefMatch) {
+				// Previous line was a function def with just a colon (e.g., "def foo():")
+				// Look for next function/block at same indent to replace
+				const prevIndent = this.getIndentLevel(prevText);
+
+				for (let i = cursorLine + 1; i < document.lineCount; i++) {
+					const line = document.lineAt(i);
+					const lineText = line.text;
+
+					// Skip empty lines and comments
+					if (lineText.trim() === '' || lineText.trim().startsWith('#')) {
+						continue;
+					}
+
+					const lineIndent = this.getIndentLevel(lineText);
+
+					// If we find a function at same indent, this is the old block to replace
+					if (lineIndent === prevIndent) {
+						const funcMatch = lineText.match(/^\s*(?:async\s+)?def\s+([a-zA-Z_]\w*)\s*\(/);
+						const classMatch = lineText.match(/^\s*class\s+([a-zA-Z_]\w*)/);
+
+						if (funcMatch || classMatch) {
+							// Found an old function/class at same indent - replace it!
+							return this.findBlockRangeFromLine(document, i, prevIndent);
+						}
+					}
+
+					// If we hit something at lower indent, stop searching
+					if (lineIndent < prevIndent) {
+						break;
+					}
+				}
+			}
+		}
+
+		// Standard case: Search backward for function definition
 		let defLine = -1;
 
 		for (let i = cursorLine; i >= 0; i--) {
@@ -396,6 +440,68 @@ export class PythonScopeAdapter implements IScopeAdapter {
 		// Create range from block line to end
 		return new vscode.Range(
 			new vscode.Position(blockLine, 0),
+			new vscode.Position(endLine, document.lineAt(endLine).text.length)
+		);
+	}
+
+	/**
+	 * Helper to find block range starting from a specific line
+	 */
+	private findBlockRangeFromLine(
+		document: vscode.TextDocument,
+		startLine: number,
+		baseIndent: number
+	): vscode.Range {
+		// Check for decorators before the start line
+		let decoratorStart = startLine;
+		for (let i = startLine - 1; i >= 0; i--) {
+			const line = document.lineAt(i);
+			const lineText = line.text;
+
+			// Skip empty lines
+			if (lineText.trim() === '') {
+				continue;
+			}
+
+			const lineIndent = this.getIndentLevel(lineText);
+
+			// Stop if indent is less than base
+			if (lineIndent < baseIndent) {
+				break;
+			}
+
+			// Check if this is a decorator at same indent
+			if (lineIndent === baseIndent && lineText.trim().startsWith('@')) {
+				decoratorStart = i;
+			} else {
+				break; // Not a decorator, stop searching
+			}
+		}
+
+		// Find the end of the block
+		let endLine = startLine;
+		for (let i = startLine + 1; i < document.lineCount; i++) {
+			const line = document.lineAt(i);
+			const lineText = line.text;
+
+			// Skip empty lines
+			if (lineText.trim() === '') {
+				continue;
+			}
+
+			const lineIndent = this.getIndentLevel(lineText);
+
+			// If indent returns to base or lower level, we've found the end
+			if (lineIndent <= baseIndent) {
+				break;
+			}
+
+			endLine = i;
+		}
+
+		// Create range from decorator/function start to end of block
+		return new vscode.Range(
+			new vscode.Position(decoratorStart, 0),
 			new vscode.Position(endLine, document.lineAt(endLine).text.length)
 		);
 	}
