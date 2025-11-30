@@ -150,7 +150,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 			// Check if this line matches our key at the same indent
 			if (lineIndent === targetIndent) {
 				const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
-				if (keyMatch && keyMatch[2] === unit.identifier) {
+				if (keyMatch && this.keysMatch(keyMatch[2], unit.identifier)) {
 					matchLine = i;
 					break;
 				}
@@ -178,7 +178,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 				// Check if this line matches our key at the same indent
 				if (lineIndent === targetIndent) {
 					const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
-					if (keyMatch && keyMatch[2] === unit.identifier) {
+					if (keyMatch && this.keysMatch(keyMatch[2], unit.identifier)) {
 						matchLine = i;
 						break;
 					}
@@ -285,6 +285,30 @@ export class YamlScopeAdapter implements IScopeAdapter {
 			new vscode.Position(matchLine, 0),
 			new vscode.Position(endLine, document.lineAt(endLine).text.length)
 		);
+	}
+
+	/**
+	 * Check if two YAML keys match (supports suffix matching for ansible.builtin.X)
+	 */
+	private keysMatch(existingKey: string, newKey: string): boolean {
+		// Exact match
+		if (existingKey === newKey) {
+			return true;
+		}
+
+		// Check if newKey is a fully qualified version of existingKey
+		// e.g., existingKey="shell", newKey="ansible.builtin.shell"
+		if (newKey.endsWith('.' + existingKey)) {
+			return true;
+		}
+
+		// Check if existingKey is a fully qualified version of newKey
+		// e.g., existingKey="ansible.builtin.shell", newKey="shell"
+		if (existingKey.endsWith('.' + newKey)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
