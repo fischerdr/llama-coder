@@ -1,0 +1,10 @@
+---
+- name: Test visual diff positional replacement
+  hosts: localhost
+  tasks:
+    - name: Get cpu count for worker
+      shell:
+
+        command: >-
+          "{{ old command that should be deleted }}"
+        register: old_result
