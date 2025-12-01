@@ -130,7 +130,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 		console.log(`[YamlAdapter] findKeyValueBlockRange: cursorLine=${cursorLine}, targetIndent=${targetIndent}, key="${unit.identifier}"`);
 
 		// Special case: If cursor is on a blank/nearly-blank line after a key (e.g., after pressing Enter),
-		// look for the NEXT non-empty block at the same indent to replace (positional replacement)
+		// look for CHILD blocks (higher indent) to replace (positional replacement)
 		const currentLineText = document.lineAt(cursorLine).text.trim();
 		const previousLine = cursorLine > 0 ? document.lineAt(cursorLine - 1) : null;
 
@@ -146,8 +146,8 @@ export class YamlScopeAdapter implements IScopeAdapter {
 			console.log(`[YamlAdapter] Testing positional replacement, prevKeyMatch:`, prevKeyMatch);
 
 			if (prevKeyMatch) {
-				// Previous line was a key with just a colon (e.g., "  ansible.builtin.shell:")
-				// Look for next block at same indent to replace
+				// Previous line was a key with just a colon (e.g., "  shell:")
+				// Look for CHILD blocks (indent > prevIndent) to replace
 				const prevIndent = this.getIndentLevel(prevText);
 
 				console.log(`[YamlAdapter] ✓ Positional mode activated! Previous line matched, prevIndent=${prevIndent}`);
@@ -170,7 +170,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 					if (lineIndent > prevIndent) {
 						const keyMatch = lineText.match(/^(\s*)([a-zA-Z_][\w.-]*)\s*:/);
 						if (keyMatch) {
-							// Found an old key-value block at same indent - replace it!
+							// Found an old child block - replace it!
 							console.log(`[YamlAdapter]   ✓ Found old block at L${i + 1}, key="${keyMatch[2]}"`);
 							const range = this.findBlockRange(document, i, prevIndent);
 							console.log(`[YamlAdapter]   DELETE RANGE: L${range.start.line + 1}-L${range.end.line + 1} (${range.end.line - range.start.line + 1} lines)`);
@@ -178,7 +178,7 @@ export class YamlScopeAdapter implements IScopeAdapter {
 							console.log(`[YamlAdapter]   DELETED TEXT:\n${deletedText.split('\n').map((l, idx) => `      L${range.start.line + 1 + idx}: ${l}`).join('\n')}`);
 							return range;
 						}
-						console.log(`[YamlAdapter]   Line at same indent but not a key-value block`);
+						console.log(`[YamlAdapter]   Line has higher indent but not a key-value block`);
 					}
 
 					// If we hit something at lower indent, stop searching
